@@ -49,8 +49,8 @@ dane$sex <- ifelse(dane$sex == "Female", 0, 1)
 dane$year <- sub("^([1-9]+).*", "\\1", dane$year)
 dane$accomodation <- ifelse(grepl("^Private.*", dane$accomodation), 1, ifelse(grepl("^Non.*", dane$accomodation), 0, dane$accomodation))
 unique(dane$allowance)
-dane$allowance <- as.numeric(factor(dane$allowance))-1
-dane$scholarship <- as.numeric(factor(dane$scholarship))-1
+dane$allowance <- as.integer(factor(dane$allowance))-1
+dane$scholarship <- as.integer(factor(dane$scholarship))-1
 ```
 
 ## Czyszczenie danych
