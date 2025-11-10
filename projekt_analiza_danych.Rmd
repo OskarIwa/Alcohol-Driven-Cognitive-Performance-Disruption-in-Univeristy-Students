@@ -1,0 +1,64 @@
+---
+title: "Alcohol-Driven-Cognitive-Performance-Disruption-in-Univeristy-Students"
+author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(naniar)
+library(dplyr)
+library(tidyverse)
+```
+
+## Wprowadzenie
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r data cleansing}
+dane <- read.csv("Stats survey.csv")
+dane[dane == ""] <- NA
+dane <- dane %>% select(-Timestamp)
+dane <- dane %>% rename(sex = Your.Sex.,
+                        grade_12 = Your.Matric..grade.12..Average..GPA..in...,
+                        year = What.year.were.you.in.last.year..2023...,
+                        faculty = What.faculty.does.your.degree.fall.under.,
+                        grade_last_y = Your.2023.academic.year.average.GPA.in....Ignore.if.you.are.2024.1st.year.student.,
+                        accomodation = Your.Accommodation.Status.Last.Year..2023.,
+                        allowance = Monthly.Allowance.in.2023,
+                        scholarship = Were.you.on.scholarship.bursary.in.2023.,
+                        studying = Additional.amount.of.studying..in.hrs..per.week,
+                        partying = How.often.do.you.go.out.partying.socialising.during.the.week..,
+                        drinks = On.a.night.out..how.many.alcoholic.drinks.do.you.consume.,
+                        classes_missed =  How.many.classes.do.you.miss.per.week.due.to.alcohol.reasons...i.e..being.hungover.or.too.tired..,
+                        modules_failed = How.many.modules.have.you.failed.thus.far.into.your.studies.,
+                        relationship = Are.you.currently.in.a.romantic.relationship.,
+                        parents_alcohol_approval = Do.your.parents.approve.alcohol.consumption.,
+                        relationship_w_parents =How.strong.is.your.relationship.with.your.parent.s.)
+
+n_miss(dane)
+miss_var_summary(dane)
+vis_miss(dane, sort_miss = TRUE)
+gg_miss_fct(dane, sex)
+gg_miss_fct(dane, drinks)
+dane <- dane %>% filter(!is.na(sex))
+dane$sex <- ifelse(dane$sex == "Female", 0, 1)
+dane$year <- sub("^([1-9]+).*", "\\1", dane$year)
+dane$accomodation <- ifelse(grepl("^Private.*", dane$accomodation), 1, ifelse(grepl("^Non.*", dane$accomodation), 0, dane$accomodation))
+unique(dane$allowance)
+dane$allowance <- as.numeric(factor(dane$allowance))-1
+dane$scholarship <- as.numeric(factor(dane$scholarship))-1
+```
+
+## Czyszczenie danych
+
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
