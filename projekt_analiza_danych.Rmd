@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(naniar)
 library(dplyr)
 library(tidyverse)
+library(finalfit)
+library(mice)
+library(miceadds)
+library(ggmice)
 ```
 
 ## Wprowadzenie
@@ -44,6 +48,11 @@ miss_var_summary(dane)
 vis_miss(dane, sort_miss = TRUE)
 gg_miss_fct(dane, sex)
 gg_miss_fct(dane, drinks)
+missing_pattern(dane, )
+md.pattern(dane, rotate.names = TRUE)
+
+dane_imp <- mice(dane, m=5, maxit = 5, seed = 123)
+
 dane <- dane %>% filter(!is.na(sex))
 dane$sex <- ifelse(dane$sex == "Female", 0, 1)
 dane$year <- sub("^([1-9]+).*", "\\1", dane$year)
@@ -54,11 +63,12 @@ dane$scholarship <- as.integer(factor(dane$scholarship))-1
 ```
 
 ## Czyszczenie danych
-
+Widać zależność pomiędzy zmiennymi 'year' i 'grade_last_year', w związku z tym zostanie zastosowany MICE
 
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+ggmice(dane, aes(year, grade_last_y)) + 
+  geom_point()
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
