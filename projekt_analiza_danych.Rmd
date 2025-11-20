@@ -12,15 +12,11 @@ library(dplyr)
 library(tidyverse)
 library(finalfit)
 library(mice)
-library(miceadds)
 library(ggmice)
+library(VIM)
 ```
 
 ## Wprowadzenie
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r data cleansing}
 dane <- read.csv("Stats survey.csv")
@@ -28,7 +24,7 @@ dane[dane == ""] <- NA
 dane <- dane %>% select(-Timestamp)
 dane <- dane %>% rename(sex = Your.Sex.,
                         grade_12 = Your.Matric..grade.12..Average..GPA..in...,
-                        year = What.year.were.you.in.last.year..2023...,
+                        last_year = What.year.were.you.in.last.year..2023...,
                         faculty = What.faculty.does.your.degree.fall.under.,
                         grade_last_y = Your.2023.academic.year.average.GPA.in....Ignore.if.you.are.2024.1st.year.student.,
                         accomodation = Your.Accommodation.Status.Last.Year..2023.,
@@ -43,32 +39,74 @@ dane <- dane %>% rename(sex = Your.Sex.,
                         parents_alcohol_approval = Do.your.parents.approve.alcohol.consumption.,
                         relationship_w_parents =How.strong.is.your.relationship.with.your.parent.s.)
 
-n_miss(dane)
-miss_var_summary(dane)
-vis_miss(dane, sort_miss = TRUE)
-gg_miss_fct(dane, sex)
-gg_miss_fct(dane, drinks)
-missing_pattern(dane, )
-md.pattern(dane, rotate.names = TRUE)
-
-dane_imp <- mice(dane, m=5, maxit = 5, seed = 123)
-
-dane <- dane %>% filter(!is.na(sex))
+dane$last_year <- ifelse(is.na(dane$last_year) & is.na(dane$grade_last_y), "12th class", dane$last_year)
 dane$sex <- ifelse(dane$sex == "Female", 0, 1)
-dane$year <- sub("^([1-9]+).*", "\\1", dane$year)
 dane$accomodation <- ifelse(grepl("^Private.*", dane$accomodation), 1, ifelse(grepl("^Non.*", dane$accomodation), 0, dane$accomodation))
-unique(dane$allowance)
-dane$allowance <- as.integer(factor(dane$allowance))-1
-dane$scholarship <- as.integer(factor(dane$scholarship))-1
+dane$allowance <- as.numeric(factor(dane$allowance, levels = c("R 4001- R 5000", "R 5001 - R 6000", "R 6001 - R 7000", "R 7001 - R 8000", "R 8000+"))) - 1
+dane$scholarship <- ifelse(dane$scholarship == "No", 0, ifelse(grepl("^Yes.*", dane$scholarship),1,dane$scholarship))
+dane$studying <- as.numeric(factor(dane$studying, levels = c("0", "1-3", "3-5", "5-8", "8+"))) - 1
+dane$drinks <- factor(dane$drinks, levels = c("0", "1-3", "3-5", "5-8", "8+"))
+dane$classes_missed <- as.numeric(factor(dane$classes_missed, levels = c("0", "1", "2", "3",  "4+"))) - 1
+dane$modules_failed <- as.numeric(factor(dane$modules_failed, levels = c("0", "1", "2", "3",  "4+"))) - 1
+dane$relationship <- ifelse(dane$relationship == "No", 0, ifelse(dane$relationship == "Yes", 1, dane$relationship))
+dane$parents_alcohol_approval <- ifelse(dane$parents_alcohol_approval == "No", 0, ifelse(dane$parents_alcohol_approval == "Yes", 1, dane$parents_alcohol_approval))
+dane$relationship_w_parents <- factor(dane$relationship_w_parents, levels = c("Distant", "Fair", "Close", "Very close"))
 ```
 
 ## Czyszczenie danych
-Widać zależność pomiędzy zmiennymi 'year' i 'grade_last_year', w związku z tym zostanie zastosowany MICE
+Płeć: 0 - kobiety, 1 - mężczyźni
+Zakwaterowanie: 0 - publiczne, 1 - prywatne
+Dochód rozporządalny: zamieniliśmy na dane kategoryczne: 0 - 4001 - 5000, 1- 5001 - 6000, 2 - 6001 - 7000, 3 - 7001 -8000, 4 - 8000+
+Stypendium: 0 - brak, 1 - jest
+Uczenie się: dane kategoryczne: 0 - 0, 1 - 1-3, 2 - 3-5, 3 - 5-8, 4 - 8+
+picie: dane kategoryczne
+opuszczone zajęcia: dane kategoryczne: 0 - 0 , 1 - 1, 2-2 , 3 - 3, 4 - 4+
+niezdane przedmioty: dane kategoryczne: 0 - 0 , 1 - 1, 2-2 , 3 - 3, 4 - 4+
+status relacji: 0 - singiel, 1 - zajęty
+czy rodzice akceptują picie alkoholu: 0 - nie, 1 - tak
+relacja z rodzicami: dane kategorycznen
+niezmienione zmienne: last_year, faculty, partying 
+
+Zamieniliśmy NA w zmiennej last_year dla osób, które miały braki w last_year i grade_last_y na 12th class, ponieważ ten pattern braku zmiany wynika z wypełniania ankiety przez pierwszoklasiste
+
+Osoby, które zaznaczyły Postgraduate zaznaczały odpowiedzi zgodnie ze swoim ostatnim rokiem spędzonym na uczelni (nie był to 2023)
+
+Jeżeli pierwszoklasista posiada jakąś ocenę z zeszłego roku, to jest to błąd. 
+
+Część braków danych zmiennej grade_last_y to braki danych strukturalne, czyli wynikają one z faktu, że dana zmienna nie dotyczy części obserwacji (Jeżeli ostatnia klasa to 12, to nie ma możliwości posiadanie oceny za ostatni rok na studiach)
 
 
-```{r pressure, echo=FALSE}
-ggmice(dane, aes(year, grade_last_y)) + 
+```{r wizualizacja braków i ich usuwanie}
+ggmice(dane, aes(last_year, grade_last_y)) + 
   geom_point()
+
+vis_miss(dane, sort_miss = TRUE)
+gg_miss_fct(dane, sex)
+gg_miss_fct(dane, drinks)
+md.pattern(dane, rotate.names = TRUE)
+
+dane <- dane %>% filter(!is.na(sex))
+dane <- dane %>% filter(!is.na(faculty))
+dane <- dane %>% filter(!is.na(last_year))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Usuwamy 2 wiersze, które są całkowicie pozbawione wartości 
+Usuwamy obserwacje, u której nie posiadamy informacji na temat kierunku przez trudność imputacji tej konkretnej zmiennej
+Usuwamy obserwacje, u której nie posiadamy informacji na temat klasy sprzed roku przez trudność imputacji tej konkretnej zmiennej
+
+```{r imputacja danych}
+dane_imp <- kNN(dane, variable = c("grade_last_y", "grade_12", "accomodation", "allowance", "scholarship", "studying", "classes_missed", "modules_failed"), k = 5)
+
+dane$grade_last_y <- ifelse(dane$last_year != "12th class" & is.na(dane$grade_last_y), dane_imp$grade_last_y, dane$grade_last_y)
+dane$grade_12 <- ifelse(is.na(dane$grade_12), dane_imp$grade_12, dane$grade_12)
+dane$accomodation <- ifelse(is.na(dane$accomodation), dane_imp$accomodation, dane$accomodation)
+dane$allowance <- ifelse(is.na(dane$allowance), dane_imp$allowance, dane$allowance)
+dane$scholarship <- ifelse(is.na(dane$scholarship), dane_imp$scholarship, dane$scholarship)
+dane$studying <- ifelse(is.na(dane$studying), dane_imp$studying, dane$studying)
+dane$classes_missed <- ifelse(is.na(dane$classes_missed), dane_imp$classes_missed, dane$classes_missed)
+dane$modules_failed <- ifelse(is.na(dane$modules_failed), dane_imp$modules_failed, dane$modules_failed)
+```
+
+Została użyta metoda KNN - k-najbliższych sąsiadów
+Opisz tutaj dlaczego k=5
+
