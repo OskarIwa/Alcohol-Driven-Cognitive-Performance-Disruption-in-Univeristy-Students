@@ -14,11 +14,12 @@ library(finalfit)
 library(mice)
 library(ggmice)
 library(VIM)
+library(ggplot2)
 ```
 
 ## Wprowadzenie
 
-```{r data cleansing}
+```{r data wrangling}
 dane <- read.csv("Stats survey.csv")
 dane[dane == ""] <- NA
 dane <- dane %>% select(-Timestamp)
@@ -40,7 +41,7 @@ dane <- dane %>% rename(sex = Your.Sex.,
                         relationship_w_parents =How.strong.is.your.relationship.with.your.parent.s.)
 
 dane$last_year <- ifelse(is.na(dane$last_year) & is.na(dane$grade_last_y), "12th class", dane$last_year)
-dane$sex <- ifelse(dane$sex == "Female", 0, 1)
+dane$sex <- ifelse(dane$sex == "Female", 0, ifelse(dane$sex == "Male", 1, dane$sex))
 dane$accomodation <- ifelse(grepl("^Private.*", dane$accomodation), 1, ifelse(grepl("^Non.*", dane$accomodation), 0, dane$accomodation))
 dane$allowance <- as.numeric(factor(dane$allowance, levels = c("R 4001- R 5000", "R 5001 - R 6000", "R 6001 - R 7000", "R 7001 - R 8000", "R 8000+"))) - 1
 dane$scholarship <- ifelse(dane$scholarship == "No", 0, ifelse(grepl("^Yes.*", dane$scholarship),1,dane$scholarship))
@@ -76,7 +77,7 @@ Jeżeli pierwszoklasista posiada jakąś ocenę z zeszłego roku, to jest to bł
 Część braków danych zmiennej grade_last_y to braki danych strukturalne, czyli wynikają one z faktu, że dana zmienna nie dotyczy części obserwacji (Jeżeli ostatnia klasa to 12, to nie ma możliwości posiadanie oceny za ostatni rok na studiach)
 
 
-```{r wizualizacja braków i ich usuwanie}
+```{r wizualizacja braków szukanie duplikatów i ich usuwanie sprawdzenie nieścisłości}
 ggmice(dane, aes(last_year, grade_last_y)) + 
   geom_point()
 
@@ -84,15 +85,31 @@ vis_miss(dane, sort_miss = TRUE)
 gg_miss_fct(dane, sex)
 gg_miss_fct(dane, drinks)
 md.pattern(dane, rotate.names = TRUE)
+mcar_test(dane)
 
+#sprawdzenie duplikatów
+sum(duplicated(dane))
+dane %>%
+  filter(duplicated(.))
+dane %>% 
+  filter(grade_12 == 85 & grade_last_y == 73)
+dane %>% 
+  filter(grade_12 == 71 & is.na(grade_last_y))
+
+#czy usunąć duplikaty?
 dane <- dane %>% filter(!is.na(sex))
 dane <- dane %>% filter(!is.na(faculty))
 dane <- dane %>% filter(!is.na(last_year))
+
+#sprawdzenie sensu danych 
+dane %>% 
+  filter(!is.na(grade_last_y) & last_year == "12th class")
 ```
 
 Usuwamy 2 wiersze, które są całkowicie pozbawione wartości 
 Usuwamy obserwacje, u której nie posiadamy informacji na temat kierunku przez trudność imputacji tej konkretnej zmiennej
 Usuwamy obserwacje, u której nie posiadamy informacji na temat klasy sprzed roku przez trudność imputacji tej konkretnej zmiennej
+Sprawdzenie sprzeczności
 
 ```{r imputacja danych}
 dane_imp <- kNN(dane, variable = c("grade_last_y", "grade_12", "accomodation", "allowance", "scholarship", "studying", "classes_missed", "modules_failed"), k = 5)
@@ -105,8 +122,30 @@ dane$scholarship <- ifelse(is.na(dane$scholarship), dane_imp$scholarship, dane$s
 dane$studying <- ifelse(is.na(dane$studying), dane_imp$studying, dane$studying)
 dane$classes_missed <- ifelse(is.na(dane$classes_missed), dane_imp$classes_missed, dane$classes_missed)
 dane$modules_failed <- ifelse(is.na(dane$modules_failed), dane_imp$modules_failed, dane$modules_failed)
+#jakość imputcji
+stripplot(dane)
 ```
 
 Została użyta metoda KNN - k-najbliższych sąsiadów
 Opisz tutaj dlaczego k=5
+
+```{r wizualizacja danych}
+dane %>% 
+  ggplot(aes(x=grade_12)) +
+  geom_histogram(aes(fill=sex) ,binwidth = 10) +
+  ggtitle("Oceny w 12 klasie") +
+  xlab("Oceny") +
+  ylab("Częstość")
+
+dane %>% 
+  ggplot(aes(x=grade_12)) +
+  geom_density(aes(fill=sex) , alpha = .25) +
+  ggtitle("Oceny w 12 klasie") +
+  xlab("Oceny") +
+  ylab("Częstość")
+
+geom_miss_point()
+
+```
+
 
