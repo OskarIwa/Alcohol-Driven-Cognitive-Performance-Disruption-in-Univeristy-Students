@@ -19,6 +19,7 @@ library(kableExtra)
 library(editrules)
 library(factoextra)
 library(plotly)
+library(shiny)
 ```
 
 ## Wprowadzenie
@@ -91,7 +92,11 @@ Część braków danych zmiennej grade_last_y to braki danych strukturalne, czyl
 
 
 ```{r wizualizacja braków szukanie duplikatów i ich usuwanie sprawdzenie nieścisłości}
-RULE <- editset(c("grade_12 <= 100", "grade_12 >= 0", "grade_last_y <= 100", "grade_last_y >= 0", "if (last_y == '12th class') grade_last_y == NA"))
+#sprawdzenie sensu danych 
+RULE <- editset(c("grade_12 <= 100", "grade_12 >= 0", "grade_last_y <= 100", "grade_last_y >= 0"))
+summary(violatedEdits(RULE, dane))
+dane %>% 
+  filter(!is.na(grade_last_y) & last_year == "12th class")
 
 ggmice(dane, aes(last_year, grade_last_y)) + 
   geom_point()
@@ -116,9 +121,6 @@ dane <- dane %>% filter(!is.na(sex))
 dane <- dane %>% filter(!is.na(faculty))
 dane <- dane %>% filter(!is.na(last_year))
 
-#sprawdzenie sensu danych 
-dane %>% 
-  filter(!is.na(grade_last_y) & last_year == "12th class")
 ```
 
 Usuwamy 2 wiersze, które są całkowicie pozbawione wartości 
@@ -153,6 +155,82 @@ dane %>%
   ylab("Częstość")
 
 #geom_miss_point()
+dane_clust <- dane %>%
+  mutate(
+    party_num = recode(partying,
+                       "0"=0,"1"=1,"2"=2,"3"=3,"4+"=4,"Only weekends"=1.5),
+    drinks_num = recode(drinks,
+                        "0"=0,"1-3"=2,"3-5"=4,"5-8"=6,"8+"=9),
+    grade = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
+  ) %>%
+  select(studying, party_num, drinks_num, classes_missed, modules_failed, grade) %>%
+  na.omit()
+
+ui <- fluidPage(
+
+  titlePanel("🔥 Interaktywna Mapa Archetypów Studentów"),
+
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("clusters", "Liczba archetypów:", 
+                  min = 2, max = 6, value = 4, step = 1),
+      helpText("Archetypy mogą być np.: Imprezowicz, Robot, Przeciętniak, Ryzykant itd.")
+    ),
+
+    mainPanel(
+      plotlyOutput("pcaPlot"),
+      br(),
+      uiOutput("archetypeDescriptions")
+    )
+  )
+)
+
+server <- function(input, output, session){
+
+  # --- PCA ---
+  pca <- prcomp(scale(dane_clust))
+
+  clustered <- reactive({
+    set.seed(123)
+    km <- kmeans(scale(dane_clust), centers = input$clusters)
+    df <- data.frame(pca$x[,1:2], cluster = factor(km$cluster))
+    df
+  })
+
+  # --- OPIS ARCHETYPÓW ---
+  output$archetypeDescriptions <- renderUI({
+
+    desc <- c(
+      "1" = "<b>Archetyp 1:</b> Imprezowicz – dużo imprezuje, dużo pije, nisko się uczy.",
+      "2" = "<b>Archetyp 2:</b> Robot – dużo się uczy, mało imprezuje, dobre oceny.",
+      "3" = "<b>Archetyp 3:</b> Przeciętniak – średnio we wszystkim.",
+      "4" = "<b>Archetyp 4:</b> Ryzykant – dużo imprezuje, ale oceny jeszcze trzymają się średnio.",
+      "5" = "<b>Archetyp 5:</b> Samozagłada 
+      ,3000
+      – dużo imprez + mało nauki + fatalne oceny.",
+      "6" = "<b>Archetyp 6:</b> Ukryty Robot – mało imprezuje, oceny wysokie mimo małego nakładu pracy."
+    )
+
+    HTML(paste(desc[1:input$clusters], collapse = "<br><br>"))
+  })
+
+  # --- PCA plot ---
+  output$pcaPlot <- renderPlotly({
+
+    df <- clustered()
+
+    p <- ggplot(df, aes(PC1, PC2, color = cluster)) +
+      geom_point(size = 4, alpha = 0.8) +
+      scale_color_brewer(palette = "Set1") +
+      labs(title = "Mapa Archetypów Studentów (PCA + clustering)",
+           x = "PC1", y = "PC2", color = "Archetyp") +
+      theme_minimal()
+
+    ggplotly(p)
+  })
+}
+
+shinyApp(ui, server)
 
 ```
 
