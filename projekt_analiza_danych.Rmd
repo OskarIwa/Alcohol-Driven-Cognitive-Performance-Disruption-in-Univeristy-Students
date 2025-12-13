@@ -234,8 +234,90 @@ shinyApp(ui, server)
 
 ```
 
-```{r analiza opisowa}
+```{r wykres pytanie 7}
+# 1. DANE
+dane_plot <- dane %>%
+  filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex)) %>%
+  mutate(drinks = factor(drinks, levels = c("0", "1-3", "3-5", "5-8", "8+")))
 
+# 2. AGREGACJA
+srednie_df <- dane_plot %>%
+  group_by(sex, drinks) %>%
+  summarise(srednia_ocena = mean(grade_last_y), .groups = "drop")
+
+# 3. KOLORYSTYKA "MODERN TECH"
+my_colors <- c("Kobieta" = "#FF2D55",  # Apple Pink / Coral
+               "Mężczyzna" = "#007AFF") # Apple Blue
+
+# 4. WYKRES BAZOWY
+p <- ggplot() +
+  
+  # A. SKRZYPCE (TŁO)
+  geom_violin(data = dane_plot, 
+              aes(x = drinks, y = grade_last_y, color = sex, fill = sex),
+              alpha = 0.1,            # Bardzo delikatne tło, żeby nie przytłaczało
+              trim = TRUE,            
+              size = 0.3,             # Cieniutki kontur
+              position = position_dodge(width = 0.7)) +
+  
+  # B. LINIE TRENDU
+  geom_line(data = srednie_df, 
+            aes(x = drinks, y = srednia_ocena, group = sex, color = sex),
+            size = 1.2, 
+            position = position_dodge(width = 0.7)) +
+  
+  # C. PUNKTY (NOŚNIK INFORMACJI)
+  # Tylko tutaj definiujemy 'text'
+  geom_point(data = srednie_df, 
+             aes(x = drinks, y = srednia_ocena, color = sex,
+                 text = paste0("<b>", sex, "</b>",
+                               "<br>Liczba drinków: ", drinks,
+                               "<br>Średnia ocena: ", round(srednia_ocena, 1))),
+             size = 3.5, shape = 18, # Nieco większe punkty dla czytelności
+             position = position_dodge(width = 0.7)) +
+  
+  # D. ESTETYKA
+  scale_color_manual(values = my_colors) +
+  scale_fill_manual(values = my_colors) +
+  scale_y_continuous(limits = c(30, 100)) + 
+  labs(x = "Liczba drinków podczas wyjścia", y = "Średnia ocen (GPA)") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(), # Pionowe linie są zbędne przy kategoriach
+    legend.position = "none"
+  )
+
+# 5. FINALNY PLOTLY + FIX DYMKÓW (NUCLEAR OPTION)
+final_tech <- ggplotly(p, tooltip = "text") %>%
+  layout(
+    font = list(family = "Arial, sans-serif", size = 12, color = "#333333"),
+    title = list(text = "<b>Czy płeć moderuje wpływ alkoholu na wyniki?</b>", 
+                 y = 0.96, x = 0.05, xanchor = "left", font = list(size = 18)),
+    legend = list(
+      orientation = "h", xanchor = "center", x = 0.5, y = -0.15,
+      title = list(text = "<b>Płeć: </b>"),
+      itemclick = "toggleothers",
+      itemdoubleclick = "toggle"
+    ),
+    margin = list(t = 70, b = 80, l = 60, r = 20),
+    hovermode = "closest"
+  ) %>%
+  config(displayModeBar = FALSE)
+
+for (i in seq_along(final_tech$x$data)) {
+  # Sprawdzamy, czy dana warstwa to punkty (mode zawiera 'markers')
+  # Jeśli nie (czyli to linie lub skrzypce), ustawiamy hoverinfo na 'skip'
+  if (!grepl("markers", final_tech$x$data[[i]]$mode)) {
+    final_tech$x$data[[i]]$hoverinfo <- "skip"
+  }
+}
+
+final_tech
+```
+
+
+```{r analiza opisowa}
 
 ```
 
