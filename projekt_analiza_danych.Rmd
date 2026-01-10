@@ -1,12 +1,16 @@
 ---
-title: "Alcohol-Driven-Cognitive-Performance-Disruption-in-Univeristy-Students"
+title: "Alcohol Driven Cognitive Performance Disruption in Univeristy Students"
 author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    theme:
+      bootswatch: cosmo  
+    toc: true
+    toc_float: true      
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r pakiety, include=FALSE}
 library(naniar)
 library(dplyr)
 library(tidyverse)
@@ -16,15 +20,34 @@ library(ggmice)
 library(VIM)
 library(ggplot2)
 library(kableExtra)
-library(editrules)
+library(knitr)
+library(validate)
 library(factoextra)
 library(plotly)
 library(shiny)
+library(prettydoc)
+library(flexdashboard)
 ```
 
-## Wprowadzenie
+# Wprowadzenie
+## Cel badania
+Celem niniejszego projektu jest zbadanie wielowymiarowych zależności między spożyciem alkoholu, towarzyszącym mu stylem życia a wynikami w nauce (GPA) oraz funkcjonowaniem poznawczym studentów uniwersyteckich. Problem ten jest istotny ze względu na powszechność kultury picia w środowisku akademickim i jej potencjalnie negatywny wpływ na karierę edukacyjną.
+Analiza opiera się na danych ankietowych obejmujących zmienne demograficzne, ekonomiczne (stypendia, zakwaterowanie), społeczne (relacje z rodzicami) oraz behawioralne (częstotliwość imprezowania, absencja na zajęciach). W toku prac dane poddano czyszczeniu oraz imputacji, aby zapewnić rzetelność wnioskowania statystycznego.
 
-```{r data wrangling}
+## Pytania badawcze
+
+W ramach analizy postawiono następujące pytania badawcze, mające na celu zgłębienie mechanizmów rządzących badanym zjawiskiem:
+
+1. **Bezpośredni wpływ alkoholu na wyniki:** Czy istnieje istotna statystycznie, ujemna korelacja między ilością spożywanego alkoholu a średnią ocen (GPA)?
+2. **Rola statusu ekonomicznego:** Czy wyższy dochód rozporządalny (`allowance`) stymuluje intensywniejsze życie towarzyskie, pośrednio wpływając na obniżenie wyników w nauce?
+3. **Środowisko zamieszkania a kultura studencka:** Czy rodzaj zakwaterowania (sektor prywatny/dom rodzinny vs. akademiki) różnicuje siłę związku między spożyciem alkoholu a liczbą opuszczonych zajęć?
+4. **Psychospołeczne determinanty:** Czy jakość relacji z rodzicami oraz ich aprobata dla spożywania alkoholu stanowią istotne predyktory ryzykownych zachowań studentów?
+5. **Efekt kompensacji:** Czy zwiększony nakład pracy własnej (dodatkowe godziny nauki w tygodniu) jest w stanie zniwelować negatywny wpływ "imprezowego stylu życia" na średnią ocen?
+6. W jakim stopniu "imprezowy styl życia" zwiększa ryzyko niezdania przedmiotów?
+7. **Różnice międzypłciowe (Gender Gap):** Czy płeć studenta różnicuje wzorce spożycia alkoholu oraz czy moderuje siłę związku między piciem a wynikami w nauce?
+
+
+```{r data wrangling, include=FALSE}
 dane <- read.csv("Stats survey.csv")
 dane[dane == ""] <- NA
 dane <- dane %>% select(-Timestamp)
@@ -68,44 +91,31 @@ dane$parents_alcohol_approval <- factor(dane$parents_alcohol_approval, levels = 
 dane$relationship_w_parents <- factor(dane$relationship_w_parents, levels = c("Distant", "Fair", "Close", "Very close"))
 ```
 
-## Czyszczenie danych
-Płeć: 0 - kobiety, 1 - mężczyźni
-Zakwaterowanie: 0 - publiczne, 1 - prywatne
-Dochód rozporządalny: zamieniliśmy na dane kategoryczne: 0 - 4001 - 5000, 1- 5001 - 6000, 2 - 6001 - 7000, 3 - 7001 -8000, 4 - 8000+
-Stypendium: 0 - brak, 1 - jest
-Uczenie się: dane kategoryczne: 0 - 0, 1 - 1-3, 2 - 3-5, 3 - 5-8, 4 - 8+
-picie: dane kategoryczne
-opuszczone zajęcia: dane kategoryczne: 0 - 0 , 1 - 1, 2-2 , 3 - 3, 4 - 4+
-niezdane przedmioty: dane kategoryczne: 0 - 0 , 1 - 1, 2-2 , 3 - 3, 4 - 4+
-status relacji: 0 - singiel, 1 - zajęty
-czy rodzice akceptują picie alkoholu: 0 - nie, 1 - tak
-relacja z rodzicami: dane kategorycznen
-niezmienione zmienne: last_year, faculty, partying 
+# Czyszczenie danych
 
-Zamieniliśmy NA w zmiennej last_year dla osób, które miały braki w last_year i grade_last_y na 12th class, ponieważ ten pattern braku zmiany wynika z wypełniania ankiety przez pierwszoklasiste
+W tym etapie surowe dane ankietowe zostały poddane standaryzacji i transformacji, aby umożliwić ich dalszą analizę statystyczną. Wykonano następujące operacje:
 
-Osoby, które zaznaczyły Postgraduate zaznaczały odpowiedzi zgodnie ze swoim ostatnim rokiem spędzonym na uczelni (nie był to 2023)
+* **Selekcja i nazewnictwo:** Usunięto zbędne kolumny (np. znaczniki czasowe) oraz nadano zmiennym intuicyjne nazwy (np. `sex`, `grade_12`, `drinks`), zastępując długie pytania z kwestionariusza (Tabela 1).
+* **Kodyfikacja zmiennych:**
+    * Zmienne binarne (np. płeć, stypendium) przekodowano na format **0-1**.
+    * Zmienne opisowe (np. przedziały dochodów, liczba drinków) zamieniono na **skalę porządkową**, co pozwoli na zachowanie hierarchii danych w modelach korelacji.
+* **Logika dla pierwszego roku:** Zidentyfikowano specyficzną grupę studentów pierwszego roku ("12th class"). Ich braki danych w kolumnie ocen z poprzedniego roku akademickiego (`grade_last_y`) nie są błędem, lecz wynikają ze struktury badania (brak historii studiowania). Zostało to uwzględnione w procesie czyszczenia.
+* **Walidacja danych:** Zostały również sprawdzone ograniczenia, które musiały obejmować zmienne i zostały pod tym kątem sprawdzone.
+* **Duplikaty:** Wśród obserwacji były również duplikaty, jednak przez bardzo małą ich ilość (2) założyliśmy, że istnieje możliwość na zaistnienie takiej sytuacji, więc nie zostały one usunięte.
 
-Jeżeli pierwszoklasista posiada jakąś ocenę z zeszłego roku, to jest to błąd. 
-
-Część braków danych zmiennej grade_last_y to braki danych strukturalne, czyli wynikają one z faktu, że dana zmienna nie dotyczy części obserwacji (Jeżeli ostatnia klasa to 12, to nie ma możliwości posiadanie oceny za ostatni rok na studiach)
-
-
-```{r wizualizacja braków szukanie duplikatów i ich usuwanie sprawdzenie nieścisłości}
+```{r diagnostyka, include=FALSE}
 #sprawdzenie sensu danych 
-RULE <- editset(c("grade_12 <= 100", "grade_12 >= 0", "grade_last_y <= 100", "grade_last_y >= 0"))
-summary(violatedEdits(RULE, dane))
+rules <- validator(
+  Oceny_12_klasa = (grade_12 >= 0 & grade_12 <= 100) | is.na(grade_12),
+  Oceny_zeszly_rok = (grade_last_y >= 0 & grade_last_y <= 100) | is.na(grade_last_y),
+  Brak_oceny_12_klasa = if (last_year == "12th class") is.na(grade_last_y)
+)
+out <- confront(dane, rules)
+summary(out)
+
+#sprawdzenie NA w ostatniej zasadzie
 dane %>% 
-  filter(!is.na(grade_last_y) & last_year == "12th class")
-
-ggmice(dane, aes(last_year, grade_last_y)) + 
-  geom_point()
-
-vis_miss(dane, sort_miss = TRUE)
-gg_miss_fct(dane, sex)
-gg_miss_fct(dane, drinks)
-md.pattern(dane, rotate.names = TRUE)
-mcar_test(dane)
+  filter(is.na(last_year))
 
 #sprawdzenie duplikatów
 sum(duplicated(dane))
@@ -116,37 +126,137 @@ dane %>%
 dane %>% 
   filter(grade_12 == 71 & is.na(grade_last_y))
 
-#czy usunąć duplikaty?
+#usunięcie wierszy z brakami bez imputacji
 dane <- dane %>% filter(!is.na(sex))
 dane <- dane %>% filter(!is.na(faculty))
 dane <- dane %>% filter(!is.na(last_year))
 
 ```
 
-Usuwamy 2 wiersze, które są całkowicie pozbawione wartości 
-Usuwamy obserwacje, u której nie posiadamy informacji na temat kierunku przez trudność imputacji tej konkretnej zmiennej
-Usuwamy obserwacje, u której nie posiadamy informacji na temat klasy sprzed roku przez trudność imputacji tej konkretnej zmiennej
-Sprawdzenie sprzeczności
 
-```{r imputacja danych}
-dane_imp <- kNN(dane, variable = c("grade_last_y", "grade_12", "accomodation", "allowance", "scholarship", "studying", "classes_missed", "modules_failed"), k = 5)
+```{r tabela-zmiennych, echo=FALSE}
 
-dane$grade_last_y <- ifelse(dane$last_year != "12th class" & is.na(dane$grade_last_y), dane_imp$grade_last_y, dane$grade_last_y)
-dane$grade_12 <- ifelse(is.na(dane$grade_12), dane_imp$grade_12, dane$grade_12)
-dane$accomodation <- ifelse(is.na(dane$accomodation), dane_imp$accomodation, dane$accomodation)
-dane$allowance <- ifelse(is.na(dane$allowance), dane_imp$allowance, dane$allowance)
-dane$scholarship <- ifelse(is.na(dane$scholarship), dane_imp$scholarship, dane$scholarship)
-dane$studying <- ifelse(is.na(dane$studying), dane_imp$studying, dane$studying)
-dane$classes_missed <- ifelse(is.na(dane$classes_missed), dane_imp$classes_missed, dane$classes_missed)
-dane$modules_failed <- ifelse(is.na(dane$modules_failed), dane_imp$modules_failed, dane$modules_failed)
-#jakość imputcji
-#stripplot(dane)
+slownik <- data.frame(
+  "Nazwa_Zmiennej" = c(
+    "sex", "grade_12", "last_year", "faculty", "grade_last_y", 
+    "accomodation", "allowance", "scholarship", "studying", 
+    "partying", "drinks", "classes_missed", "modules_failed", 
+    "relationship", "parents_alcohol_approval", "relationship_w_parents"
+  ),
+  "Opis_Pytania" = c(
+    "Płeć respondenta",
+    "Średnia ocen z 12 klasy (GPA)",
+    "Rok studiów w roku 2023",
+    "Kierunek studiów",
+    "Średnia ocen za rok akademicki 2023",
+    "Status zakwaterowania (prywatne vs publiczne)",
+    "Miesięczny budżet",
+    "Czy student posiadał stypendium",
+    "Dodatkowe godziny nauki tygodniowo",
+    "Częstotliwość wychodzenia na imprezy",
+    "Liczba drinków spożywanych jednej nocy",
+    "Liczba zajęć opuszczonych przez alkohol",
+    "Liczba niezdanych przedmiotów",
+    "Czy student jest w związku",
+    "Czy rodzice akceptują spożywanie alkoholu",
+    "Relacja z rodzicami"
+  )
+)
+
+# Generowanie ładnej tabeli
+kable(slownik, 
+      col.names = c("Nazwa zmiennej", "Opis zmiennej"),
+      caption = "Tabela 1: Słownik zmiennych") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = F, 
+                position = "left") %>%
+  column_spec(1, bold = TRUE, color = "#2c3e50") %>% # Wyróżnienie nazw zmiennych
+  column_spec(2, width = "30em") # Poszerzenie opisu dla czytelności
 ```
 
-Została użyta metoda KNN - k-najbliższych sąsiadów
-Opisz tutaj dlaczego k=5
+# Analiza i diagnoza braków danych
 
-```{r wizualizacja danych}
+```{r wizualizacja braków, echo=FALSE, warning=FALSE, fig.show='hold', out.width='50%', fig.height=6}
+gg_miss_upset(dane, nsets = 5, nintersects = 10)
+
+
+gg_miss_var(dane, show_pct = TRUE) + 
+  labs(title = "Procentowy udział braków danych w zmiennych",
+       y = "% Brakujących wartości",
+       x = "Zmienne") +
+  theme_minimal()
+
+```
+
+Przed przystąpieniem do imputacji (uzupełniania) danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar` i `ggmice`. Pozwoliło to na podjęcie kluczowych decyzji:
+
+1. **Eliminacja rekordów:** Usunięto obserwacje posiadające braki w kluczowych zmiennych strukturalnych: `sex` (płeć), `faculty` (wydział) oraz `last_year` (rok studiów). Zmienne te definiują profil studenta i są trudne do wiarygodnego, sztucznego odtworzenia.
+2. **Identyfikacja mechanizmu braków:** Potwierdzono, że część braków ma charakter strukturalny (wspomniani studenci pierwszego roku), co wyklucza prostą imputację średnią dla całej populacji.
+
+```{r imputacja danych, warning=FALSE, include=FALSE}
+dane_imp <- kNN(dane, variable = c("grade_last_y", "grade_12", "accomodation", "allowance", "scholarship", "studying", "classes_missed", "modules_failed"), k = 5)
+
+dane$grade_last_y <- as.numeric(ifelse(dane$last_year != "12th class" & is.na(dane$grade_last_y), dane_imp$grade_last_y, dane$grade_last_y))
+
+dane <- dane %>%
+  mutate(
+    allowance = coalesce(allowance, dane_imp$allowance),
+    scholarship = coalesce(scholarship, dane_imp$scholarship),
+    accomodation = coalesce(accomodation, dane_imp$accomodation),
+    grade_12 = coalesce(grade_12, dane_imp$grade_12),
+    studying = coalesce(studying, dane_imp$studying),
+    classes_missed = coalesce(classes_missed, dane_imp$classes_missed),
+    modules_failed = coalesce(modules_failed, dane_imp$modules_failed)
+  )
+
+```
+
+# Imputacja danych
+
+Pozostałe braki danych (w zmiennych takich jak `allowance`, `scholarship` czy `grades`) uzupełniono, wykorzystując algorytm **k-Nearest Neighbors (kNN)**. Metoda ta polega na znalezieniu dla każdej niepełnej obserwacji grupy najbardziej podobnych do niej studentów ("sąsiadów") i uzupełnieniu braku na podstawie ich danych.
+
+**Dobór parametru $k=5$:**
+
+Zdecydowano się na ustawienie parametru liczby sąsiadów na $k=5$. Jest to optymalny kompromis:
+
+* Wartość ta jest wystarczająco duża, aby zminimalizować wpływ pojedynczych wartości odstających (szumu w danych).
+* Jednocześnie jest wystarczająco mała, aby zachować lokalną strukturę danych i nie doprowadzić do nadmiernego "wygładzenia" (uśrednienia) specyficznych cech studentów.
+
+Dla zmiennej `grade_last_y` zastosowano podejście hybrydowe: imputacja została przeprowadzona, a następnie skorygowana logicznie dla studentów pierwszego roku, aby nie przypisywać im sztucznych ocen z okresu, gdy nie studiowali.
+
+```{r wizualizacja imputacji, echo=FALSE, fig.height=6, fig.show='hold', warning=FALSE, out.width='50%'}
+#jakość imputcji
+
+ggplot(dane_imp, aes(x = allowance, y = grade_12, color = allowance_imp)) +
+  geom_jitter(alpha = 0.6, width = 0.2, size = 2.5) +
+  scale_color_manual(values = c("skyblue3", "firebrick1"), 
+                     labels = c("Oryginalne", "Imputowane")) +
+  labs(title = "Weryfikacja imputacji: Miesięczny budżet (allowance)",
+       subtitle = "Rozkład ocen względem budżetu z zaznaczeniem wartości uzupełnionych",
+       x = "Kategoria budżetu (allowance)",
+       y = "Średnia ocen (grade_12)",
+       color = "Status danych") +
+  theme_minimal()
+
+ggplot(dane_imp, aes(x = accomodation, y = grade_12, color = accomodation_imp)) +
+  geom_jitter(alpha = 0.6, width = 0.15, size = 2.5) +
+  scale_color_manual(values = c("skyblue3", "firebrick1"), 
+                     labels = c("Oryginalne", "Imputowane")) +
+  labs(title = "Weryfikacja imputacji: Zakwaterowanie (accomodation)",
+       subtitle = "Rozkład ocen względem rodzaju zakwaterowania",
+       x = "Rodzaj zakwaterowania",
+       y = "Średnia ocen (grade_12)",
+       color = "Status danych") +
+  theme_minimal()
+
+```
+
+## Weryfikacja jakości imputacji
+W celu potwierdzenia poprawności działania algorytmu wygenerowano wykresy typu stripplot dla zmiennych `allowance` oraz `accommodation`. Zdecydowaliśmy się akurat na te zmienne ze względu na to, że tylko one mają braki na poziomie co najmniej 5% (oprócz braków strukturalnych w `grade_12`).
+
+Wybrano zestawienie tych kategorii ze zmienną `grade_12`, aby sprawdzić, czy wartości uzupełnione (zaznaczone na czerwono) naturalnie wpisują się w rozkład danych oryginalnych. Brak wyraźnych skupisk punktów imputowanych poza chmurą danych zaobserwowanych potwierdza, że proces uzupełniania nie wprowadził zniekształceń do struktury zbioru.
+
+```{r wizualizacja danych, eval=FALSE, include=FALSE}
 dane %>% 
   ggplot(aes(x=grade_12)) +
   geom_density(aes(fill=sex) , alpha = .25) +
@@ -234,7 +344,7 @@ shinyApp(ui, server)
 
 ```
 
-```{r wykres pytanie 7}
+```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
 # 1. DANE
 dane_plot <- dane %>%
   filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex)) %>%
