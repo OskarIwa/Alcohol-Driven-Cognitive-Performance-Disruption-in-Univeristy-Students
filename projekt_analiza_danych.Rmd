@@ -27,6 +27,7 @@ library(plotly)
 library(shiny)
 library(prettydoc)
 library(flexdashboard)
+library(ggalluvial)
 ```
 
 # Wprowadzenie
@@ -256,6 +257,8 @@ W celu potwierdzenia poprawności działania algorytmu wygenerowano wykresy typu
 
 Wybrano zestawienie tych kategorii ze zmienną `grade_12`, aby sprawdzić, czy wartości uzupełnione (zaznaczone na czerwono) naturalnie wpisują się w rozkład danych oryginalnych. Brak wyraźnych skupisk punktów imputowanych poza chmurą danych zaobserwowanych potwierdza, że proces uzupełniania nie wprowadził zniekształceń do struktury zbioru.
 
+# Wizualizacja danych
+
 ```{r wizualizacja danych, eval=FALSE, include=FALSE}
 dane %>% 
   ggplot(aes(x=grade_12)) +
@@ -264,7 +267,6 @@ dane %>%
   xlab("Oceny") +
   ylab("Częstość")
 
-#geom_miss_point()
 dane_clust <- dane %>%
   mutate(
     party_num = recode(partying,
@@ -343,6 +345,106 @@ server <- function(input, output, session){
 shinyApp(ui, server)
 
 ```
+
+```{r zrobienie danych, include=FALSE}
+dane_analiza <- dane %>%
+  mutate(
+    # Konwersja allowance na wartość numeryczną (środek przedziału)
+    allow_val = case_when(
+      allowance == "R 0 - R 1000" ~ 500,
+      allowance == "R 1001 - R 2000" ~ 1500,
+      allowance == "R 2001 - R 3000" ~ 2500,
+      allowance == "R 3001 - R 4000" ~ 3500,
+      allowance == "R 4001- R 5000" ~ 4500,
+      allowance == "R 5001 - R 6000" ~ 5500,
+      allowance == "R 6001 - R 7000" ~ 6500,
+      allowance == "R 7001 - R 8000" ~ 7500,
+      allowance == "R 8001+" ~ 9000,
+      TRUE ~ 0
+    ),
+    # Grupowanie dochodu dla lepszej czytelności (Niski vs Wysoki)
+    allow_group = ifelse(allow_val > 4000, "Wysoki budżet", "Niski budżet"),
+    # Skala towarzyska (Partying + Drinks)
+    social_index = recode(partying, "0"=0, "1"=1, "2"=2, "3"=3, "4+"=4, "Only weekends"=1.5) +
+                   recode(drinks, "0"=0, "1-3"=2, "3-5"=4, "5-8"=6, "8+"=9),
+    # Wynik akademicki (hybrydowy)
+    grade_final = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
+  )
+```
+
+## Wpływ statusu ekonomicznego na styl życia i wyniki
+
+W tej sekcji postaraliśmy się odpowiedzieć na pytanie badawcze **czy wyższy dochód rozporządzalny stymuluje intensywniejsze życie towarzyskie?**
+
+```{r pytanie 2, echo=FALSE}
+ggplot(dane_analiza, aes(x = social_index, y = grade_final)) +
+  # Generowanie chmur gęstości
+  geom_density_2d_filled(alpha = 0.8) +
+  facet_wrap(~allow_group) + 
+  
+  # Ustawienie kolorów i etykiet (uproszczone: tylko Niska i Wysoka)
+  scale_fill_viridis_d(
+    option = "plasma",
+    labels = c("Niska", "", "", "", "", "", "", "", "","", "Wysoka")
+  ) +
+  
+  labs(
+    title = "Koncentracja studentów: Nauka vs Zabawa",
+    subtitle = "Zależność między budżetem a stylem życia.",
+    x = "Indeks Towarzyski",
+    y = "Wynik Akademicki (GPA %)",
+    fill = "Gęstość występowania:"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    # Przeniesienie legendy na dół
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    # Pogrubienie tytułu i dodanie mu miejsca
+    legend.title = element_text(face = "bold", size = 10),
+    # KLUCZOWE: Dodanie marginesu na dole całego wykresu, żeby legenda się zmieściła
+    plot.margin = margin(t = 10, r = 10, b = 25, l = 10),
+    # Odstępy między panelami
+    panel.spacing = unit(2, "lines"),
+    strip.text = element_text(face = "bold")
+  ) +
+  
+  # Konfiguracja wyglądu paska legendy
+  guides(fill = guide_legend(
+    nrow = 1, 
+    # Wydłużenie paska (keywidth), żeby było go lepiej widać
+    keywidth = unit(1.3, "cm"), 
+    keyheight = unit(0.4, "cm"),
+    # Ustawienie tytułu NAD paskiem (to rozwiązuje problem widoczności napisu)
+    title.position = "top", 
+    title.hjust = 0.5,
+    label.position = "bottom"
+  ))
+```
+
+### Metodologia i wskaźniki
+Aby umożliwić obiektywne porównanie grup, wprowadzono dwa parametry analityczne:
+
+* **Podział budżetu:** Próbę badawczą podzielono na dwa segmenty względem miesięcznego kieszonkowego:
+    * **Niższy budżet:** $\le 5000$ R.
+    * **Wyższy budżet:** $> 5000$ R.
+* **Indeks Towarzyski:** Stworzono zagregowany wskaźnik (skala 0–13 pkt), będący sumą punktów za:
+    * *Częstotliwość imprezowania* (`partying`): 0–4 pkt (w tym wartość 1.5 dla "Only weekends").
+    * *Ilość spożywanego alkoholu* (`drinks`): 0–9 pkt.
+    * Wskaźnik ten obrazuje **całkowitą intensywność stylu życia** studenta.
+
+### Interpretacja mapy gęstości
+Wizualizacja wykorzystuje metodę estymacji gęstości jądrowej (**2D Kernel Density**). Skala kolorystyczna wskazuje na stopień koncentracji obserwacji w danej przestrzeni.
+
+### Kluczowe wnioski
+1.  **Pieniądze jako stymulant:** W grupie z **wyższym budżetem** „ośrodek ciężkości” (żółty obszar) wyraźnie przesuwa się w prawą stronę osi X. Potwierdza to, że większe zasoby finansowe ułatwiają dostęp do płatnych rozrywek i sprzyjają **częstszej konsumpcji alkoholu**.
+2.  **Zwiększone ryzyko akademickie:** Choć w obu grupach najwyższe oceny korelują z niską intensywnością imprezowania, grupa zasobna wykazuje znacznie większe **rozproszone w stronę wysokiej intensywności towarzyskiej**. Sugeruje to, że nadmiar środków sprzyja przedkładaniu zabawy nad obowiązki.
+3.  **Dyscyplina niższych dochodów:** Studenci z niższym budżetem wykazują silniejszą koncentrację w obszarze **umiarkowanego życia towarzyskiego**, co przekłada się na statystycznie stabilniejsze i bardziej przewidywalne wyniki w nauce.
+
+> **Podsumowanie:** Wyższy status ekonomiczny działa jako **katalizator życia towarzyskiego**. Zwiększając dostępność kosztownych rozrywek, staje się on pośrednim czynnikiem ryzyka dla wyników akademickich poprzez wyraźną zmianę priorytetów czasowych studenta.
+
+## Różnice międzypłciowe
 
 ```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
 # 1. DANE
