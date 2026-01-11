@@ -265,13 +265,6 @@ Wybrano zestawienie tych kategorii ze zmienną `grade_12`, aby sprawdzić, czy w
 # Wizualizacja danych
 
 ```{r shiny nie wiadomo co z tym zrobić, eval=FALSE, include=FALSE}
-dane %>% 
-  ggplot(aes(x=grade_12)) +
-  geom_density(aes(fill=sex) , alpha = .25) +
-  ggtitle("Oceny w 12 klasie") +
-  xlab("Oceny") +
-  ylab("Częstość")
-
 dane_clust <- dane %>%
   mutate(
     party_num = recode(partying,
@@ -881,6 +874,83 @@ kable(
   caption = "Wyniki regresji logistycznej dla ryzyka niezdania przedmiotów",
   align = 'lcccccc' # Wyrównanie: lewo dla tekstu, środek dla liczb
 )
+
+```
+
+# Wnioskowanie statystyczne
+
+Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mieszkania prywatnego. Została zbadana różnica w wynikach w ostatnim roku dla studentów, którzy są teraz przynajmniej na 2 roku.
+
+```{r wnioskowanie statystyczne akademiki vs GPA, echo=FALSE, warning=FALSE}
+# Wykorzystujemy test Wilcoxona (odporny na brak rozkładu normalnego)
+test_wynik <- wilcox.test(grade_last_y ~ accomodation, data = dane)
+
+# Wizualizacja
+ggplot(dane, aes(x = accomodation, y = grade_last_y, fill = accomodation)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Porównanie GPA względem miejsca zamieszkania",
+       subtitle = paste("p-value =", round(test_wynik$p.value, 4))) +
+  theme_minimal()
+```
+
+
+
+```{r pytanie 4 test chi kwadrat, echo=FALSE, warning=FALSE}
+# 1. Przygotowanie tabeli kontyngencji i testu
+tab <- table(dane$parents_alcohol_approval, dane$drinks)
+chi_test <- chisq.test(tab)
+
+# 2. Wizualizacja: Heatmapa natężenia
+dane %>%
+  filter(!is.na(parents_alcohol_approval), !is.na(drinks)) %>%
+  count(parents_alcohol_approval, drinks) %>%
+  group_by(parents_alcohol_approval) %>%
+  mutate(procent = n / sum(n) * 100) %>%
+  ggplot(aes(x = drinks, y = parents_alcohol_approval, fill = procent)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "#f7fbff", high = "#084594") +
+  geom_text(aes(label = paste0(round(procent, 1), "%")), color = "black", size = 3) +
+  labs(title = "Relacja: Aprobata rodziców vs Spożycie alkoholu",
+       x = "Liczba drinków", y = "Aprobata rodziców", fill = "% w grupie") +
+  theme_minimal()
+
+# 3. Profesjonalna tabela wyników testu
+tidy(chi_test) %>%
+  select(`Statystyka Chi2` = statistic, `df` = parameter, `p-value` = p.value) %>%
+  kable(digits = 4, caption = "Wyniki testu istotności Chi-kwadrat")
+```
+
+
+```{r różnice między wydziałami, echo=FALSE}
+
+dane_fac <- dane %>%
+  mutate(drinks_num = case_when(
+    drinks == "0" ~ 0,
+    drinks == "1-3" ~ 2,
+    drinks == "3-5" ~ 4,
+    drinks == "5-8" ~ 6.5,
+    drinks == "8+" ~ 10,
+    TRUE ~ NA_real_
+  )) %>%
+  filter(!is.na(faculty), !is.na(drinks_num))
+
+# 2. Test statystyczny Kruskala-Wallisa
+kw_test <- kruskal.test(drinks_num ~ faculty, data = dane_fac)
+
+# 3. Wykres średniego spożycia na wydziałach
+dane_fac %>%
+  group_by(faculty) %>%
+  summarise(srednia_drinkow = mean(drinks_num), n = n()) %>%
+  filter(n > 2) %>% # Odrzucamy wydziały z bardzo małą liczbą studentów
+  ggplot(aes(x = reorder(faculty, srednia_drinkow), y = srednia_drinkow, fill = srednia_drinkow)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  scale_fill_viridis_c(option = "mako", direction = -1) +
+  labs(title = "Średnie spożycie alkoholu na wydziałach",
+       subtitle = paste("Test Kruskala-Wallisa p-value:", round(kw_test$p.value, 4)),
+       x = "", y = "Średnia liczba drinków (indeks)") +
+  theme_minimal() +
+  theme(legend.position = "none")
 
 ```
 
