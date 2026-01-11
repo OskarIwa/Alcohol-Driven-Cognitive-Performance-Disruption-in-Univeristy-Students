@@ -28,6 +28,9 @@ library(shiny)
 library(prettydoc)
 library(flexdashboard)
 library(ggalluvial)
+library(ggdist)
+library(tidyquant)
+library(modelsummary)
 ```
 
 # Wprowadzenie
@@ -647,10 +650,98 @@ for (i in seq_along(final_tech$x$data)) {
 final_tech
 ```
 
+# Analiza opisowa
 
-```{r analiza opisowa}
+```{r analiza opisowa rozklad ocen, echo=FALSE, message=FALSE, warning=FALSE}
+# 1. Charakterystyka akademicka (GPA)
+# Tworzymy zmienną hybrydową GPA dla pełniejszego obrazu
+dane_desc <- dane %>%
+  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y))
+
+# Statystyki opisowe ocen
+stats_gpa <- dane_desc %>%
+  summarise(
+    N = n(),
+    Średnia = round(mean(GPA, na.rm = TRUE), 2),
+    Mediana = median(GPA, na.rm = TRUE),
+    Odchylenie = round(sd(GPA, na.rm = TRUE), 2),
+    Minimum = min(GPA, na.rm = TRUE),
+    Maksimum = max(GPA, na.rm = TRUE)
+  )
+
+# 2. Wykres rozkładu ocen
+plot_gpa <- ggplot(dane_desc, aes(x = GPA)) +
+  geom_histogram(binwidth = 5, fill = "#3498db", color = "white", alpha = 0.8) +
+  geom_vline(xintercept = mean(dane_desc$GPA, na.rm = TRUE), linetype = "dashed", color = "red", size = 1) +
+  labs(title = "Rozkład ocen studentów (GPA %)", 
+       subtitle = "Czerwona linia oznacza średnią",
+       x = "Wynik (%)", y = "Liczba studentów") +
+  theme_minimal()
+
+# 3. Profil stylu życia (Studying vs Partying)
+# Przygotowanie danych do wykresu słupkowego
+
+# Wyświetlanie wyników
+plot_gpa
+kable(stats_gpa, caption = "Statystyki opisowe wyników akademickich (GPA)")
+
+
+
 
 ```
+
+```{r rozklad ocen wzgledem plci, echo=FALSE}
+# Przygotowanie danych
+dane_rain <- dane %>%
+  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
+  filter(!is.na(sex), !is.na(GPA))
+
+# Wykres
+ggplot(dane_rain, aes(x = sex, y = GPA, fill = sex)) +
+  # 1. "Chmura" - Gęstość
+  stat_halfeye(
+    adjust = .5, width = .6, .width = 0, justification = -.3, point_colour = NA
+  ) +
+  # 2. "Pudełko" - Boxplot
+  geom_boxplot(
+    width = .15, outlier.shape = NA, alpha = 0.5
+  ) +
+  # 3. "Deszcz" - Surowe dane
+  geom_point(
+    aes(color = sex),
+    position = position_jitter(width = .15), size = .5, alpha = .3
+  ) +
+  scale_fill_tq() +
+  scale_color_tq() +
+  labs(
+    title = "Rozkład ocen względem płci",
+    x = "Płeć", y = "Wynik akademicki (%)"
+  ) +
+  coord_flip() + # Obrócenie dla lepszego efektu "chmury"
+  theme_tq() +
+  theme(legend.position = "none")
+```
+
+```{r analiza opisowa wedlug stypendium, echo=FALSE}
+# Selekcja kluczowych zmiennych do tabeli
+# Przygotowanie danych
+dane_tab <- dane %>%
+  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
+  select(`Średnia ocen` = GPA, 
+         `Stypendium` = scholarship, 
+         `Płeć` = sex, 
+         `Nauka (h)` = studying, 
+         `Imprezy` = partying)
+
+# Tworzenie profesjonalnej tabeli opisowej
+datasummary_balance(~Stypendium, 
+                   data = dane_tab,
+                   title = "Charakterystyka grup względem statusu stypendialnego",
+                   dinm = FALSE) # Wyłącza różnicę średnich dla uproszczenia
+
+
+```
+
 
 # Analiza korelacji
 
