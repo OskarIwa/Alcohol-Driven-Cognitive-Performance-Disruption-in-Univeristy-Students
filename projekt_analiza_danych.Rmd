@@ -786,18 +786,101 @@ ggplot(dane_kor, aes(x = drinks_num, y = GPA)) +
 
 W celu sprawdzenia zależności między ilością spożywanego alkoholu a średnią ocen (GPA), przeprowadzono analizę korelacji rangowej Spearmana.
 
-### Wyniki analizy:
+### Wyniki analizy
 * **Współczynnik korelacji ($\rho$):** `-0.086`
 * **Poziom istotności ($p$):** `0.087`
 
 **Interpretacja statystyczna:**
 Analiza wykazała bardzo słabą, ujemną tendencję, jednak zależność ta **nie osiągnęła przyjętego progu istotności statystycznej ($p < 0.05$)**. 
 
-### Wnioski:
+### Wnioski
 1. **Brak istotności:** Ponieważ wartość $p$ (0.087) jest wyższa niż 0.05, nie mamy statystycznych podstaw, aby jednoznacznie stwierdzić, że konsumpcja alkoholu bezpośrednio obniża oceny w badanej populacji. Istnieje blisko 9% prawdopodobieństwa, że zaobserwowany trend jest jedynie wynikiem przypadku.
 2. **Siła związku:** Współczynnik $\rho = -0.086$ wskazuje na korelację śladową. Sugeruje to, że w badanej grupie studenci mogą skutecznie oddzielać życie towarzyskie od wyników w nauce lub stosować mechanizmy kompensacyjne (np. intensywniejszą naukę w dni bez imprez).
 3. **Złożoność zjawiska:** Wynik ten sugeruje, że alkohol może wpływać na wyniki jedynie pośrednio (np. poprzez absencję na zajęciach), a nie jako bezpośredni czynnik determinujący spadek GPA.
 
 > **Podsumowanie:** Hipoteza o bezpośrednim, istotnym negatywnym wpływie alkoholu na średnią ocen **nie znalazła potwierdzenia** w zebranych danych.
 
+# Model logitowy 
+
+```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
+
+dane_model <- dane %>%
+  mutate(
+    # Tworzymy zmienną binarną: Czy oblał cokolwiek? (1 = Tak, 0 = Nie)
+    failed_any = ifelse(as.numeric(modules_failed) > 1, 1, 0),
+    
+    # Konwersja czynników na skale numeryczne
+    party_num = case_when(
+      partying == "0" ~ 0,
+      partying == "1" ~ 1,
+      partying == "Only weekends" ~ 1.5,
+      partying == "2" ~ 2,
+      partying == "3" ~ 3,
+      partying == "4+" ~ 4,
+      TRUE ~ NA_real_
+    ),
+    missed_num = case_when(
+      classes_missed == "0" ~ 0,
+      classes_missed == "1" ~ 1,
+      classes_missed == "2" ~ 2,
+      classes_missed == "3" ~ 3,
+      classes_missed == "4+" ~ 4,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(failed_any), !is.na(party_num), !is.na(missed_num))
+
+# 2. Budowa modelu regresji logistycznej
+model_ryzyka <- glm(failed_any ~ party_num + missed_num, 
+                    data = dane_model, 
+                    family = binomial)
+
+# 3. Wyciągnięcie Ilorazów Szans (Odds Ratios)
+wyniki_modelu <- tidy(model_ryzyka, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(term != "(Intercept)") # Usuwamy stałą dla czytelności wykresu
+
+# 4. Wizualizacja: Forest Plot
+ggplot(wyniki_modelu, aes(x = estimate, y = term)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2c3e50") +
+  geom_point(size = 4, color = "#e74c3c") +
+  scale_y_discrete(labels = c("party_num" = "Częstotliwość imprezowania", 
+                              "missed_num" = "Opuszczanie zajęć")) +
+  labs(
+    title = "Iloraz Szans niezdania przedmiotu",
+    subtitle = "Wartości > 1 oznaczają wzrost ryzyka. Czerwona linia (1.0) to brak wpływu.",
+    x = "Ryzyko",
+    y = ""
+  ) +
+  theme_minimal()
+
+# 1. Przygotowanie czytelnej tabeli na podstawie wcześniej stworzonego modelu
+tabela_wynikow <- wyniki_modelu %>%
+  select(
+    `Czynnik` = term,
+    `Iloraz Szans (OR)` = estimate,
+    `Błąd standardowy` = std.error,
+    `Statystyka z` = statistic,
+    `Wartość p (p-value)` = p.value,
+    `Dolna granica (95%)` = conf.low,
+    `Górna granica (95%)` = conf.high
+  ) %>%
+  mutate(
+    # Mapowanie nazw na bardziej przyjazne
+    Czynnik = case_when(
+      Czynnik == "party_num" ~ "Częstotliwość imprezowania",
+      Czynnik == "missed_num" ~ "Liczba opuszczonych zajęć",
+      TRUE ~ Czynnik
+    )
+  )
+
+# 2. Generowanie tabeli kable
+kable(
+  tabela_wynikow, 
+  digits = 3, # Zaokrąglenie do 3 miejsc po przecinku
+  caption = "Wyniki regresji logistycznej dla ryzyka niezdania przedmiotów",
+  align = 'lcccccc' # Wyrównanie: lewo dla tekstu, środek dla liczb
+)
+
+```
 
