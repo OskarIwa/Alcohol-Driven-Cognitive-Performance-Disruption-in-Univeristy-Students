@@ -1101,3 +1101,53 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
   theme(legend.position = "bottom")
 ```
 
+
+```{r manova ancova anova (do obczajenia)}
+# 1. Przygotowanie danych (Faktoryzacja)
+dane_ancova <- dane %>%
+  mutate(
+    GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
+    study_num = case_when(
+      studying == "0" ~ 0,
+      studying == "1-2" ~ 1.5,
+      studying == "3-5" ~ 4,
+      studying == "5-8" ~ 6.5,
+      studying == "8+" ~ 10,
+      TRUE ~ NA_real_
+    ),
+    faculty = as.factor(faculty) # Kluczowe dla stabilności
+  ) %>%
+  filter(!is.na(faculty), !is.na(GPA), !is.na(study_num)) %>%
+  group_by(faculty) %>%
+  filter(n() >= 5) %>%
+  ungroup()
+
+# 2. Model
+model_ancova <- lm(GPA ~ study_num + faculty, data = dane_ancova)
+
+# --- TABELA 1: ISTOTNOŚĆ (ANOVA Typ III) ---
+Anova(model_ancova, type = "III") %>%
+  tidy() %>%
+  filter(term != "(Intercept)") %>%
+  mutate(p.value = scales::pvalue(p.value)) %>%
+  rename(Czynnik = term, `Suma kwadratów` = sumsq, `Statystyka F` = statistic, `p-value` = p.value) %>%
+  kable(digits = 3, booktabs = TRUE, caption = "Tabela 1: Testy istotności efektów głównych") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "center") %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#446e9b")
+
+# --- WYKRES 1: WIZUALIZACJA WPŁYWU (Forest Plot) ---
+# To jest "ładniejsza" alternatywa dla tabeli współczynników
+plot_model(model_ancova, 
+           type = "est", 
+           show.values = TRUE, 
+           value.offset = .3,
+           title = "Wpływ predyktorów na GPA (%)",
+           axis.labels = NULL, # Automatycznie pobierze z modelu
+           vline.color = "red",
+           dot.size = 3,
+           line.size = 1,
+           colors = "Set1") +
+  theme_minimal() +
+  labs(subtitle = "Współczynniki regresji z przedziałami ufności 95%")
+```
+
