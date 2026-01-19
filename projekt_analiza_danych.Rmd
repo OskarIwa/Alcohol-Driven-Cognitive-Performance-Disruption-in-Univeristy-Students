@@ -1033,3 +1033,34 @@ dane_fac %>%
 
 ```
 
+```{r porównanie czy warto sie uczyc, echo=FALSE}
+# 1. Przygotowanie danych i podział na grupy
+dane_nauka <- dane %>%
+  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
+  filter(!is.na(studying), !is.na(GPA)) %>%
+  mutate(study_group = case_when(
+    studying %in% c("0", "1-2", "3-5") ~ "Do 5h / tydz.",
+    studying %in% c("5-8", "8+") ~ "Powyżej 5h / tydz.",
+    TRUE ~ NA_character_
+  )) %>%
+  # Konwersja na faktor dla stabilności wykresu
+  mutate(study_group = as.factor(study_group))
+
+# 2. Wykres ggbetweenstats z testem odpornym
+ggbetweenstats(
+  data  = dane_nauka,
+  x     = study_group,
+  y     = GPA,
+  type  = "robust", # Statystyka odporna na nierówne grupy i outliers
+  tr    = 0.1,      # Średnia ucinana (10%)
+  title = "Porównanie GPA względem czasu poświęconego na naukę",
+  subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
+  xlab  = "Intensywność nauki własnej",
+  ylab  = "Średnia ocen (GPA %)",
+  palette = "Set2", 
+  package = "RColorBrewer",
+  messages = FALSE
+)
+
+```
+
