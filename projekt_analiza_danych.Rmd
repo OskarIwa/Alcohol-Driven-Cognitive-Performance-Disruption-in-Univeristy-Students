@@ -267,83 +267,75 @@ Wybrano zestawienie tych kategorii ze zmienną `grade_12`, aby sprawdzić, czy w
 
 # Wizualizacja danych
 
-```{r shiny nie wiadomo co z tym zrobić, eval=FALSE, include=FALSE}
+```{r klastrowanie, echo=FALSE}
+# 1. Przygotowanie danych
 dane_clust <- dane %>%
   mutate(
-    party_num = recode(partying,
-                       "0"=0,"1"=1,"2"=2,"3"=3,"4+"=4,"Only weekends"=1.5),
-    drinks_num = recode(drinks,
-                        "0"=0,"1-3"=2,"3-5"=4,"5-8"=6,"8+"=9),
+    party_num = case_when(
+       partying == "0" ~ 0, partying == "1" ~ 1, partying == "Only weekends" ~ 1.5,
+       partying == "2" ~ 2, partying == "3" ~ 3, partying == "4+" ~ 4, TRUE ~ 0
+    ),
+    drinks_num = case_when(
+       drinks == "0" ~ 0, drinks == "1-3" ~ 2, drinks == "3-5" ~ 4,
+       drinks == "5-8" ~ 6.5, drinks == "8+" ~ 10, TRUE ~ 0
+    ),
+    study_num = case_when(
+       studying == "0" ~ 0, studying == "1-3" ~ 1.5, studying == "3-5" ~ 4,
+       studying == "5-8" ~ 6.5, studying == "8+" ~ 10, TRUE ~ 0
+    ),
+    missed_num = case_when(
+       classes_missed == "0" ~ 0, classes_missed == "1" ~ 1, classes_missed == "2" ~ 2,
+       classes_missed == "3" ~ 3, classes_missed == "4+" ~ 4, TRUE ~ 0
+    ),
+    failed_num = case_when(
+       modules_failed == "0" ~ 0, modules_failed == "1" ~ 1, modules_failed == "2" ~ 2,
+       modules_failed == "3" ~ 3, modules_failed == "4+" ~ 4, TRUE ~ 0
+    ),
     grade = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
   ) %>%
-  select(studying, party_num, drinks_num, classes_missed, modules_failed, grade) %>%
+  select(study_num, party_num, drinks_num, missed_num, failed_num, grade) %>%
   na.omit()
 
-ui <- fluidPage(
+# 2. Obliczenia
+set.seed(123) 
+km <- kmeans(scale(dane_clust), centers = 3) 
+pca <- prcomp(scale(dane_clust))
 
-  titlePanel("🔥 Interaktywna Mapa Archetypów Studentów"),
-
-  sidebarLayout(
-    sidebarPanel(
-      sliderInput("clusters", "Liczba archetypów:", 
-                  min = 2, max = 6, value = 4, step = 1),
-      helpText("Archetypy mogą być np.: Imprezowicz, Robot, Przeciętniak, Ryzykant itd.")
+# 3. Przygotowanie danych do wykresu
+df_pca <- data.frame(pca$x[,1:2], cluster = factor(km$cluster)) %>%
+  bind_cols(dane_clust) %>%
+  mutate(
+    Archetyp = case_when(
+      cluster == 1 ~ "Imprezowicz",
+      cluster == 2 ~ "Przeciętniak",
+      cluster == 3 ~ "Prymus"
     ),
-
-    mainPanel(
-      plotlyOutput("pcaPlot"),
-      br(),
-      uiOutput("archetypeDescriptions")
+    opis_dymka = paste0(
+      "<b>Archetyp: </b>", Archetyp, "<br>",
+      "Średnia ocena: ", round(grade, 1), "%<br>",
+      "Nauka: ", study_num, " h/tydz<br>",
+      "Imprezy (index): ", party_num, "<br>",
+      "Drinki (index): ", drinks_num
     )
   )
-)
 
-server <- function(input, output, session){
+# 4. Wykres (TU JEST ZMIANA: geom_jitter zamiast geom_point)
+p <- ggplot(df_pca, aes(x = PC1, y = PC2, color = Archetyp, text = opis_dymka)) +
+  # Używamy jitter, żeby "roztrząsnąć" punkty.
+  # width i height kontrolują, jak bardzo mają się rozsunąć.
+  # Zmniejszyłem też trochę size (na 3), żeby było czytelniej.
+  geom_jitter(size = 2, alpha = 0.5, width = 0.12, height = 0.12) +
+  scale_color_brewer(palette = "Set1") +
+  labs(title = "Mapa Archetypów Studentów",
+       subtitle = "Analiza PCA (Punkty lekko rozsunięte dla czytelności)",
+       x = "Wymiar 1 (Styl życia)", 
+       y = "Wymiar 2 (Wyniki)", 
+       color = "Profil") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
-  # --- PCA ---
-  pca <- prcomp(scale(dane_clust))
-
-  clustered <- reactive({
-    set.seed(123)
-    km <- kmeans(scale(dane_clust), centers = input$clusters)
-    df <- data.frame(pca$x[,1:2], cluster = factor(km$cluster))
-    df
-  })
-
-  # --- OPIS ARCHETYPÓW ---
-  output$archetypeDescriptions <- renderUI({
-
-    desc <- c(
-      "1" = "<b>Archetyp 1:</b> Imprezowicz – dużo imprezuje, dużo pije, nisko się uczy.",
-      "2" = "<b>Archetyp 2:</b> Robot – dużo się uczy, mało imprezuje, dobre oceny.",
-      "3" = "<b>Archetyp 3:</b> Przeciętniak – średnio we wszystkim.",
-      "4" = "<b>Archetyp 4:</b> Ryzykant – dużo imprezuje, ale oceny jeszcze trzymają się średnio.",
-      "5" = "<b>Archetyp 5:</b> Samozagłada 
-      ,3000
-      – dużo imprez + mało nauki + fatalne oceny.",
-      "6" = "<b>Archetyp 6:</b> Ukryty Robot – mało imprezuje, oceny wysokie mimo małego nakładu pracy."
-    )
-
-    HTML(paste(desc[1:input$clusters], collapse = "<br><br>"))
-  })
-
-  # --- PCA plot ---
-  output$pcaPlot <- renderPlotly({
-
-    df <- clustered()
-
-    p <- ggplot(df, aes(PC1, PC2, color = cluster)) +
-      geom_point(size = 4, alpha = 0.8) +
-      scale_color_brewer(palette = "Set1") +
-      labs(title = "Mapa Archetypów Studentów (PCA + clustering)",
-           x = "PC1", y = "PC2", color = "Archetyp") +
-      theme_minimal()
-
-    ggplotly(p)
-  })
-}
-
-shinyApp(ui, server)
+# 5. Wyświetlanie
+ggplotly(p, tooltip = "text")
 
 ```
 
