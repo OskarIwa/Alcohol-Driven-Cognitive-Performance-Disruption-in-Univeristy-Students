@@ -1064,3 +1064,40 @@ ggbetweenstats(
 
 ```
 
+```{r czy nauka osłabia negatywny wpływ imprezowania, echo=FALSE}
+# 1. Przygotowanie danych
+dane_int <- dane %>%
+  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
+  filter(!is.na(partying), !is.na(studying), !is.na(GPA)) %>%
+  # Podział na grupy nauki (uproszczony dla czytelności wykresu)
+  mutate(study_level = ifelse(studying %in% c("0", "1-2", "3-5"), "Mało nauki (<5h)", "Dużo nauki (>5h)")) %>%
+  # Uproszczenie skali imprezowania
+  mutate(party_level = case_when(
+    partying == "0" ~ "Nigdy",
+    partying %in% c("1", "Only weekends") ~ "Rzadko",
+    partying %in% c("2", "3", "4+") ~ "Często",
+    TRUE ~ NA_character_
+  )) %>%
+  # Porządkowanie poziomów na osi X
+  mutate(party_level = factor(party_level, levels = c("Nigdy", "Rzadko", "Często")))
+
+# 2. Obliczanie średnich dla punktów na wykresie
+interakcja_summary <- dane_int %>%
+  group_by(party_level, study_level) %>%
+  summarise(mean_GPA = mean(GPA, na.rm = TRUE), .groups = 'drop')
+
+# 3. Wykres interakcji (nowoczesna wersja ggplot2)
+ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_level, group = study_level)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 4) +
+  scale_color_manual(values = c("Mało nauki (<5h)" = "#e74c3c", "Dużo nauki (>5h)" = "#2ecc71")) +
+  labs(
+    title = "Wykres interakcji: Nauka vs Imprezy",
+    x = "Intensywność imprezowania",
+    y = "Średnia ocen (GPA %)",
+    color = "Poziom nauki:"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
