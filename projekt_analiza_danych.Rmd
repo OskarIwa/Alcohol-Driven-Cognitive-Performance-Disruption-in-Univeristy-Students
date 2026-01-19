@@ -31,6 +31,10 @@ library(ggalluvial)
 library(ggdist)
 library(tidyquant)
 library(modelsummary)
+library(ggstatsplot)
+library(sjPlot)
+library(sjmisc)
+library(car)
 ```
 
 # Wprowadzenie
@@ -1102,7 +1106,7 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
 ```
 
 
-```{r manova ancova anova (do obczajenia)}
+```{r manova ancova anova (do obczajenia), echo=FALSE}
 # 1. Przygotowanie danych (Faktoryzacja)
 dane_ancova <- dane %>%
   mutate(
