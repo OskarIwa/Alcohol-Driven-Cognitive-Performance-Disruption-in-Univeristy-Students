@@ -1005,7 +1005,7 @@ ggplot(dane, aes(x = accomodation, y = grade_last_y, fill = accomodation)) +
 
 
 
-```{r pytanie 4 test chi kwadrat, echo=FALSE, warning=FALSE}
+```{r pytanie 4 wykres test chi kwadrat, echo=FALSE, warning=FALSE}
 # 1. Przygotowanie tabeli kontyngencji i testu
 tab <- table(dane$parents_alcohol_approval, dane$drinks)
 chi_test <- chisq.test(tab)
@@ -1023,11 +1023,35 @@ dane %>%
   labs(title = "Relacja: Aprobata rodziców vs Spożycie alkoholu",
        x = "Liczba drinków", y = "Aprobata rodziców", fill = "% w grupie") +
   theme_minimal()
+```
 
-# 3. Profesjonalna tabela wyników testu
+```{r test chi kwadrat, echo=FALSE}
 tidy(chi_test) %>%
-  select(`Statystyka Chi2` = statistic, `df` = parameter, `p-value` = p.value) %>%
-  kable(digits = 4, caption = "Wyniki testu istotności Chi-kwadrat")
+  mutate(
+    # 1. Formatowanie p-value (pogrubienie i czerwień dla p < 0.05)
+    p_value_display = cell_spec(
+      scales::pvalue(p.value, accuracy = 0.001),
+      bold = ifelse(p.value < 0.05, TRUE, FALSE),
+      color = ifelse(p.value < 0.05, "red", "black")
+    ),
+    # 2. Zaokrąglenie statystyki
+    statistic = round(statistic, 2)
+  ) %>%
+  select(
+    `Statystyka Chi²` = statistic, 
+    `Stopnie swobody (df)` = parameter, 
+    `Wartość p` = p_value_display,
+    `Metoda` = method
+  ) %>%
+  kable(
+    format = "html", 
+    escape = FALSE, # Konieczne, aby kolory zadziałały
+    align = "c",    # Wyśrodkowanie
+    caption = "Wyniki testu niezależności Chi-kwadrat"
+  ) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(0, bold = TRUE, background = "#f2f2f2", color = "#2c3e50") %>% # Styl nagłówka
+  column_spec(1, bold = TRUE)
 ```
 
 
@@ -1133,52 +1157,89 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
 ```
 
 
-```{r manova ancova anova (do obczajenia), echo=FALSE}
-# 1. Przygotowanie danych (Faktoryzacja)
+```{r wykres manova ancova anova (do obczajenia), echo=FALSE}
+# 1. Przygotowanie danych (bez zmian)
 dane_ancova <- dane %>%
   mutate(
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
     study_num = case_when(
       studying == "0" ~ 0,
-      studying == "1-2" ~ 1.5,
+      studying == "1-3" ~ 1.5,
       studying == "3-5" ~ 4,
       studying == "5-8" ~ 6.5,
       studying == "8+" ~ 10,
       TRUE ~ NA_real_
     ),
-    faculty = as.factor(faculty) # Kluczowe dla stabilności
+    faculty = as.factor(faculty) 
   ) %>%
   filter(!is.na(faculty), !is.na(GPA), !is.na(study_num)) %>%
   group_by(faculty) %>%
   filter(n() >= 5) %>%
   ungroup()
 
-# 2. Model
+# 2. Model (bez zmian)
 model_ancova <- lm(GPA ~ study_num + faculty, data = dane_ancova)
 
-# --- TABELA 1: ISTOTNOŚĆ (ANOVA Typ III) ---
-Anova(model_ancova, type = "III") %>%
+# --- ULEPSZONA TABELA 1: ISTOTNOŚĆ (ANOVA Typ III) ---
+# Przygotowanie danych do tabeli
+tabela_dane <- Anova(model_ancova, type = "III") %>%
   tidy() %>%
+  # --- POPRAWKA: Usuwamy wiersze, które nie mają p-value (np. Residuals) ---
+  filter(!is.na(p.value)) %>% 
   filter(term != "(Intercept)") %>%
-  mutate(p.value = scales::pvalue(p.value)) %>%
-  rename(Czynnik = term, `Suma kwadratów` = sumsq, `Statystyka F` = statistic, `p-value` = p.value) %>%
-  kable(digits = 3, booktabs = TRUE, caption = "Tabela 1: Testy istotności efektów głównych") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "center") %>%
-  row_spec(0, bold = TRUE, color = "white", background = "#446e9b")
+  mutate(
+    # Formatowanie p-value: Teraz bezpieczne, bo nie ma NA
+    `Wartość p` = cell_spec(
+      scales::pvalue(p.value, accuracy = 0.001), 
+      bold = ifelse(p.value < 0.05, TRUE, FALSE),
+      color = ifelse(p.value < 0.05, "red", "black")
+    ),
+    # Zaokrąglanie liczb dla czystości
+    statistic = round(statistic, 2),
+    sumsq = round(sumsq, 1)
+  ) %>%
+  rename(
+    `Czynnik` = term, 
+    `Suma kwadratów` = sumsq, 
+    `df` = df,
+    `Statystyka F` = statistic
+  )
 
-# --- WYKRES 1: WIZUALIZACJA WPŁYWU (Forest Plot) ---
-# To jest "ładniejsza" alternatywa dla tabeli współczynników
+# --- WYKRES 1: WIZUALIZACJA WPŁYWU (bez zmian) ---
 plot_model(model_ancova, 
            type = "est", 
            show.values = TRUE, 
            value.offset = .3,
-           title = "Wpływ predyktorów na GPA (%)",
-           axis.labels = NULL, # Automatycznie pobierze z modelu
-           vline.color = "red",
-           dot.size = 3,
-           line.size = 1,
-           colors = "Set1") +
-  theme_minimal() +
-  labs(subtitle = "Współczynniki regresji z przedziałami ufności 95%")
+           title = "Wpływ czynników na wynik GPA",
+           axis.labels = NULL, 
+           vline.color = "grey50",
+           dot.size = 3.5,
+           line.size = 1.2,
+           colors = "Dark2") +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10, face = "bold")
+  ) +
+  labs(
+    subtitle = "Współczynniki regresji z 95% przedziałem ufności.",
+    y = "Szacowana zmiana GPA (%)",
+    x = ""
+  )
 ```
+
+```{r tabela ancova, echo=FALSE}
+# Generowanie tabeli
+tabela_dane %>%
+  kable(
+    format = "html", 
+    escape = FALSE, # Ważne dla kolorowania
+    align = "c",
+    caption = "Tabela 1: Wyniki analizy kowariancji (ANCOVA)"
+  ) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>%
+  row_spec(0, bold = TRUE, background = "#f2f2f2") 
+```
+
 
