@@ -664,9 +664,9 @@ final_tech
 
 # Analiza opisowa
 
+## Statystyki opisowe wyników akademickich (GPA)
 ```{r analiza opisowa rozklad ocen, echo=FALSE, message=FALSE, warning=FALSE}
 # 1. Charakterystyka akademicka (GPA)
-# Tworzymy zmienną hybrydową GPA dla pełniejszego obrazu
 dane_desc <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y))
 
@@ -681,26 +681,50 @@ stats_gpa <- dane_desc %>%
     Maksimum = max(GPA, na.rm = TRUE)
   )
 
+# Wyliczenie średniej do zmiennej (dla wygody)
+srednia <- mean(dane_desc$GPA, na.rm = TRUE)
+
 # 2. Wykres rozkładu ocen
 plot_gpa <- ggplot(dane_desc, aes(x = GPA)) +
   geom_histogram(binwidth = 5, fill = "#3498db", color = "white", alpha = 0.8) +
-  geom_vline(xintercept = mean(dane_desc$GPA, na.rm = TRUE), linetype = "dashed", color = "red", size = 1) +
+  
+  # DODANE: Liczby nad słupkami (tylko > 0)
+  geom_text(stat = "bin", binwidth = 5, 
+            aes(label = ifelse(after_stat(count) > 0, after_stat(count), "")), 
+            vjust = -0.5, size = 3) +
+  
+  geom_vline(xintercept = srednia, linetype = "dashed", color = "red", size = 1) +
+  
+  # DODANE: Tekst z wartością średniej
+  annotate("text", x = srednia + 1, y = 60, 
+           label = paste0("Średnia: ", round(srednia, 2)), 
+           color = "red", hjust = 0, fontface = "bold") +
+  
   labs(title = "Rozkład ocen studentów (GPA %)", 
        subtitle = "Czerwona linia oznacza średnią",
        x = "Wynik (%)", y = "Liczba studentów") +
   theme_minimal()
 
-# 3. Profil stylu życia (Studying vs Partying)
-# Przygotowanie danych do wykresu słupkowego
-
 # Wyświetlanie wyników
 plot_gpa
 kable(stats_gpa, caption = "Statystyki opisowe wyników akademickich (GPA)")
-
-
-
-
 ```
+
+### Rozkład wyników akademickich (GPA)
+
+Przeprowadzona analiza statystyczna zmiennej charakteryzującej wyniki w nauce (GPA) na próbie $N = 398$ studentów pozwala na sformułowanie następujących wniosków dotyczących struktury osiągnięć akademickich badanej populacji:
+
+**1. Przeciętny poziom i typowy wynik**
+Rozkład ocen przypomina klasyczną **krzywą Gaussa (rozkład normalny)**, co jest sytuacją pożądaną w statystyce. Potwierdza to fakt, że średnia ocena ($\bar{x} = 68.4\%$) jest niemal identyczna jak mediana ($Me = 68\%$). Taka zbieżność oznacza, że grupa jest symetryczna – nie ma tu wyraźnej przewagi osób z wynikami bardzo niskimi ani bardzo wysokimi. Najwięcej studentów (tzw. dominanta) uzyskuje wyniki w przedziale **70–75%**, co wskazuje, że standardem w badanej grupie jest poziom "dobry".
+
+**2. Zróżnicowanie wyników (Dyspersja)**
+Wartość odchylenia standardowego ($SD = 9.98$) świadczy o umiarkowanym zróżnicowaniu wyników. W praktyce oznacza to, że **większość badanej grupy** (ok. 68% studentów) mieści się w przedziale wyników od ok. **58% do 78%**. Sugeruje to, że poziom wiedzy studentów jest stosunkowo wyrównany, choć oczywiście występują naturalne różnice indywidualne.
+
+**3. Rozpiętość osiągnięć**
+Mimo koncentracji wyników wokół średniej, w grupie występuje pełne spektrum osiągnięć (rozstęp wynosi 66 punktów procentowych). Najniższy zanotowany wynik to **30%**, a najwyższy **96%**. Wskazuje to na obecność w badanej grupie zarówno nielicznych osób zagrożonych niezaliczeniem (widocznych na wykresie jako pojedyncze przypadki poniżej 40%), jak i studentów wybitnych. Są to jednak wyjątki na tle całej populacji.
+
+**Podsumowanie:**
+Zmienna GPA posiada pożądane właściwości statystyczne (bliskość rozkładu normalnego, brak drastycznych asymetrii), co czyni ją wiarygodnym wskaźnikiem do dalszych analiz korelacyjnych, np. w kontekście badania wpływu konsumpcji alkoholu na efektywność akademicką.
 
 ```{r rozklad ocen wzgledem plci, echo=FALSE}
 # Przygotowanie danych
