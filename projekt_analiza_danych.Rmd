@@ -59,7 +59,7 @@ W ramach analizy postawiono następujące pytania badawcze:
 ```{r data wrangling, include=FALSE}
 dane <- read.csv("Stats survey.csv")
 dane[dane == ""] <- NA
-dane <- dane %>% select(-Timestamp)
+dane <- dane %>% dplyr::select(-Timestamp)
 dane <- dane %>% rename(sex = Your.Sex.,
                         grade_12 = Your.Matric..grade.12..Average..GPA..in...,
                         last_year = What.year.were.you.in.last.year..2023...,
@@ -298,7 +298,7 @@ dane_clust <- dane %>%
     ),
     grade = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
   ) %>%
-  select(study_num, party_num, drinks_num, missed_num, failed_num, grade) %>%
+  dplyr::select(study_num, party_num, drinks_num, missed_num, failed_num, grade) %>%
   na.omit()
 
 # 2. Obliczenia
@@ -613,8 +613,7 @@ Analiza wpływu alkoholu na wyniki byłaby niepełna bez uwzględnienia czynnik�
 ```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
 # 1. DANE
 dane_plot <- dane %>%
-  filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex)) %>%
-  mutate(drinks = factor(drinks, levels = c("0", "1-3", "3-5", "5-8", "8+")))
+  filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex))
 
 # 2. AGREGACJA
 srednie_df <- dane_plot %>%
@@ -810,7 +809,7 @@ dane_tabs <- dane %>%
                         levels = c("No", "Yes"), 
                         labels = c("Niestypendyści", "Stypendyści"))
   ) %>%
-  select(GPA, Stypendium, sex, studying, partying)
+  dplyr::select(GPA, Stypendium, sex, studying, partying)
 
 # 2. STATYSTYKI GPA
 stats_gpa <- dane_tabs %>%
@@ -1073,89 +1072,115 @@ Analiza wykazała bardzo słabą, ujemną tendencję, jednak zależność ta **n
 
 > **Podsumowanie:** Hipoteza o bezpośrednim, istotnym negatywnym wpływie alkoholu na średnią ocen **nie znalazła potwierdzenia** w zebranych danych.
 
-# Model logitowy 
-
+# Uporządkowany model logitowy 
 ```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
+library(MASS)
 
-dane_model <- dane %>%
+dane_ordinal <- dane %>%
   mutate(
-    # Tworzymy zmienną binarną: Czy oblał cokolwiek? (1 = Tak, 0 = Nie)
-    failed_any = ifelse(as.numeric(modules_failed) > 1, 1, 0),
-    
-    # Konwersja czynników na skale numeryczne
+    fail_level = case_when(
+      modules_failed == "0" ~ "Brak",
+      modules_failed == "1" ~ "1 oblany",
+      modules_failed == "2" ~ "2 oblane",
+      modules_failed %in% c("3", "4+") ~ "3+ oblane"
+    ),
+    fail_level = factor(fail_level, 
+                        levels = c("Brak", "1 oblany", "2 oblane", "3+ oblane"), 
+                        ordered = TRUE),
     party_num = case_when(
       partying == "0" ~ 0,
       partying == "1" ~ 1,
       partying == "Only weekends" ~ 1.5,
-      partying == "2" ~ 2,
-      partying == "3" ~ 3,
-      partying == "4+" ~ 4,
+      partying %in% c("2", "3", "4+") ~ 3,
       TRUE ~ NA_real_
     ),
     missed_num = case_when(
       classes_missed == "0" ~ 0,
       classes_missed == "1" ~ 1,
       classes_missed == "2" ~ 2,
-      classes_missed == "3" ~ 3,
-      classes_missed == "4+" ~ 4,
+      classes_missed %in% c("3", "4+") ~ 3,
       TRUE ~ NA_real_
     )
   ) %>%
-  filter(!is.na(failed_any), !is.na(party_num), !is.na(missed_num))
+  filter(!is.na(fail_level), !is.na(party_num), !is.na(missed_num))
 
-# 2. Budowa modelu regresji logistycznej
-model_ryzyka <- glm(failed_any ~ party_num + missed_num, 
-                    data = dane_model, 
-                    family = binomial)
+# --- 2. BUDOWA MODELU ---
+model_ord_simple <- polr(fail_level ~ party_num + missed_num, 
+                         data = dane_ordinal, 
+                         Hess = TRUE)
 
-# 3. Wyciągnięcie Ilorazów Szans (Odds Ratios)
-wyniki_modelu <- tidy(model_ryzyka, exponentiate = TRUE, conf.int = TRUE) %>%
-  filter(term != "(Intercept)") # Usuwamy stałą dla czytelności wykresu
-
-# 4. Wizualizacja: Forest Plot
-ggplot(wyniki_modelu, aes(x = estimate, y = term)) +
-  geom_vline(xintercept = 1, linetype = "dashed", color = "red") +
-  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high), height = 0.2, color = "#2c3e50") +
-  geom_point(size = 4, color = "#e74c3c") +
-  scale_y_discrete(labels = c("party_num" = "Częstotliwość imprezowania", 
-                              "missed_num" = "Opuszczanie zajęć")) +
-  labs(
-    title = "Iloraz Szans niezdania przedmiotu",
-    subtitle = "Wartości > 1 oznaczają wzrost ryzyka. Czerwona linia (1.0) to brak wpływu.",
-    x = "Ryzyko",
-    y = ""
-  ) +
-  theme_minimal()
-
-# 1. Przygotowanie czytelnej tabeli na podstawie wcześniej stworzonego modelu
-tabela_wynikow <- wyniki_modelu %>%
-  select(
-    `Czynnik` = term,
-    `Iloraz Szans (OR)` = estimate,
-    `Błąd standardowy` = std.error,
-    `Statystyka z` = statistic,
-    `Wartość p (p-value)` = p.value,
-    `Dolna granica (95%)` = conf.low,
-    `Górna granica (95%)` = conf.high
-  ) %>%
+# --- 3. PRZYGOTOWANIE WYNIKÓW ---
+wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(coef.type == "coefficient") %>%
   mutate(
-    # Mapowanie nazw na bardziej przyjazne
-    Czynnik = case_when(
-      Czynnik == "party_num" ~ "Częstotliwość imprezowania",
-      Czynnik == "missed_num" ~ "Liczba opuszczonych zajęć",
-      TRUE ~ Czynnik
-    )
+    p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE),
+    term = case_when(
+      term == "party_num" ~ "Częstotliwość imprezowania",
+      term == "missed_num" ~ "Opuszczanie zajęć",
+      TRUE ~ term
+    ),
+    label_text = paste0("OR: ", round(estimate, 2))
   )
 
-# 2. Generowanie tabeli kable
-kable(
-  tabela_wynikow, 
-  digits = 3, # Zaokrąglenie do 3 miejsc po przecinku
-  caption = "Wyniki regresji logistycznej dla ryzyka niezdania przedmiotów",
-  align = 'lcccccc' # Wyrównanie: lewo dla tekstu, środek dla liczb
-)
+# --- 4. WYKRES ---
+ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey60", size = 0.8) +
+  geom_segment(aes(x = term, xend = term, y = 1, yend = estimate), 
+               color = ifelse(wyniki_statystyczne$p.value < 0.05, "#2980b9", "grey80"), 
+               size = 1.2) +
+  geom_point(aes(color = p.value < 0.05), size = 5) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), 
+                width = 0.1, color = "grey40", alpha = 0.6) +
+  geom_text(aes(label = label_text), hjust = -0.4, vjust = -0.5, size = 3.5, fontface = "bold", color = "#34495e") +
+  coord_flip() +
+  scale_color_manual(values = c("TRUE" = "#2980b9", "FALSE" = "grey80")) +
+  labs(
+    title = "Co zwiększa liczbę oblanych przedmiotów:",
+    x = "",
+    y = "Iloraz Szans"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    panel.grid.major.y = element_blank(),
+    plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
 
+# --- 5. TABELA (NAPRAWIONA) ---
+wyniki_statystyczne %>%
+  mutate(
+    p_val_num = scales::pvalue(p.value, accuracy = 0.001),
+    estimate = round(estimate, 2),
+    conf.low = round(conf.low, 2),
+    conf.high = round(conf.high, 2)
+  ) %>%
+  # --- TUTAJ BYŁ BŁĄD -> DODANO dplyr:: ---
+  dplyr::select(
+    `Czynnik` = term,
+    `OR` = estimate,
+    `Dolna gr.` = conf.low,
+    `Górna gr.` = conf.high,
+    `p-value` = p_val_num
+  ) %>%
+  kable(
+    format = "html", 
+    align = "lcccc",
+    caption = "Wyniki porządkowego modelu logitowego"
+  ) %>%
+  kable_material(c("striped", "hover"), full_width = F, html_font = "Roboto") %>%
+  column_spec(2, bold = TRUE, background = "#eaf2f8", color = "#2874a6", border_right = TRUE) %>%
+  column_spec(5, color = "grey40", italic = TRUE) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
+  
 ```
+
+## Interpretacje i wnioski
+**Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
+
+**Częstotliwość imprezowania**: Wynik ten jest wysoce istotny i wskazuje na silną, odwrotną zależność. Wartość OR poniżej 1.0 oznacza, że wyższa aktywność towarzyska (przy stałym poziomie nieobecności) wiąże się ze spadkiem ryzyka porażki. Konkretnie, wyższy poziom aktywności towarzyskiej obniża szansę na niepowodzenie o około 31%.
+
+**Wniosek**: Wynik ten sugeruje, że życie towarzyskie może pełnić funkcję "bufora stresu" lub sprzyjać budowaniu kapitału społecznego (wspólna nauka, wymiana notatek). Studenci aktywni towarzysko radzą sobie lepiej niż osoby izolujące się, pod warunkiem, że imprezowanie nie prowadzi do opuszczania zajęć.
 
 ```{r zrobienie danych do wykresu łokciowego, include=FALSE}
 dane_analiza <- dane %>%
@@ -1220,7 +1245,7 @@ dane_analiza <- dane %>%
 ```{r elbow_plot, echo=FALSE, message=FALSE, warning=FALSE}
 # --- PRZYGOTOWANIE DANYCH ---
 dane_do_klastrowania <- dane_analiza %>%
-  select(drinks_num_score, party_num_score, study_num_score, grade_final) %>%
+  dplyr::select(drinks_num_score, party_num_score, study_num_score, grade_final) %>%
   na.omit() %>%
   scale()
 
@@ -1292,7 +1317,7 @@ tidy(chi_test) %>%
     # 2. Zaokrąglenie statystyki
     statistic = round(statistic, 2)
   ) %>%
-  select(
+  dplyr::select(
     `Statystyka Chi²` = statistic, 
     `Stopnie swobody (df)` = parameter, 
     `Wartość p` = p_value_display,
