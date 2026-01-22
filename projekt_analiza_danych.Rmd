@@ -762,25 +762,130 @@ Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zr�
 **Pdsumowanie:**
 Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
-```{r analiza opisowa wedlug stypendium, echo=FALSE}
-# Selekcja kluczowych zmiennych do tabeli
-# Przygotowanie danych
-dane_tab <- dane %>%
-  mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
-  select(`Średnia ocen` = GPA, 
-         `Stypendium` = scholarship, 
-         `Płeć` = sex, 
-         `Nauka (h)` = studying, 
-         `Imprezy` = partying)
+## Profil studenta w kontekście statusu stypendialnego
+```{r analiza_stypendium_final_v4, echo=FALSE, message=FALSE, warning=FALSE}
+# 1. Przygotowanie danych
+dane_tabs <- dane %>%
+  mutate(
+    GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
+    Stypendium = factor(scholarship, 
+                        levels = c("No", "Yes"), 
+                        labels = c("Niestypendyści", "Stypendyści"))
+  ) %>%
+  select(GPA, Stypendium, Płeć = sex, `Nauka (h)` = studying, Imprezy = partying)
 
-# Tworzenie profesjonalnej tabeli opisowej
-datasummary_balance(~Stypendium, 
-                   data = dane_tab,
-                   title = "Charakterystyka grup względem statusu stypendialnego",
-                   dinm = FALSE) # Wyłącza różnicę średnich dla uproszczenia
+# 2. Statystyki dla GPA (Średnia i SD)
+tab_gpa <- datasummary(GPA ~ Stypendium * (Mean + SD), 
+                       data = dane_tabs, output = "data.frame")
+colnames(tab_gpa) <- c("Cecha", "Mean1", "SD1", "Mean2", "SD2")
+tab_gpa$Cecha <- "Średnia ocen (GPA)"
 
+# 3. Statystyki dla zmiennych kategorycznych (N i %)
+tab_cat <- datasummary_balance(~Stypendium, data = dane_tabs %>% select(-GPA), 
+                               dinm = FALSE, output = "data.frame")
+tab_cat <- tab_cat[, 1:5]
+colnames(tab_cat) <- c("Cecha", "N1", "Pct1", "N2", "Pct2")
 
+# Usuwamy puste wiersze nagłówkowe wygenerowane przez datasummary
+tab_cat_clean <- tab_cat %>% filter(N1 != "" & !is.na(N1))
+
+# 4. Połączenie wszystkiego w jedną strukturę
+
+# Ujednolicamy nazwy kolumn we wszystkich zbiorach przed łączeniem
+kolumny_cel <- c("Cecha", "Stat1", "Stat2", "Stat3", "Stat4")
+
+# Przygotowanie wiersza z N
+n_row <- data.frame(
+  Cecha = "Liczba obserwacji (N)", 
+  Stat1 = as.character(table(dane_tabs$Stypendium)[1]), 
+  Stat2 = "", 
+  Stat3 = as.character(table(dane_tabs$Stypendium)[2]), 
+  Stat4 = "",
+  stringsAsFactors = FALSE
+)
+
+# Ujednolicenie tab_gpa
+colnames(tab_gpa) <- kolumny_cel
+
+# Ujednolicenie tab_cat_clean
+colnames(tab_cat_clean) <- kolumny_cel
+
+# Funkcja pomocnicza do tworzenia niebieskich pasków nagłówkowych
+make_header <- function(tytul) {
+  setNames(data.frame(tytul, "", "", "", "", stringsAsFactors = FALSE), kolumny_cel)
+}
+
+# Łączenie
+final_df <- rbind(
+  n_row,
+  tab_gpa,
+  make_header("PŁEĆ"),
+  tab_cat_clean[1:2, ],
+  make_header("CZAS NAUKI"),
+  tab_cat_clean[3:7, ],
+  make_header("IMPREZOWANIE"),
+  tab_cat_clean[8:nrow(tab_cat_clean), ]
+)
+# 5. Wykrywanie wierszy nagłówkowych (do pokolorowania sekcji)
+indeksy_sekcji <- which(final_df[[2]] == "" & final_df[[3]] == "")
+
+# 6. Budowa i stylizacja flextable
+ft <- flextable(final_df) %>%
+  # Dodanie górnego, podwójnego nagłówka z nazwami grup
+  add_header_row(
+    values = c("", "NIESTYPENDYŚCI", "STYPENDYŚCI"),
+    colwidths = c(1, 2, 2)
+  ) %>%
+  # Ustawienie czytelnych nazw kolumn pod nagłówkami grup
+  set_header_labels(
+    Stat1 = "Mean(N)", Stat2 = "SD(%)",
+    Stat3 = "Mean(N)", Stat4 = "SD(%)"
+  ) %>%
+  
+  # STYLIZACJA KOLORYSTYCZNA
+  # Główny nagłówek
+  bg(part = "header", bg = "#1565c0") %>%
+  color(part = "header", color = "white") %>%
+  bold(part = "header") %>%
+  
+  # Wiersze sekcji
+  bg(i = indeksy_sekcji, bg = "#e3f2fd") %>%
+  color(i = indeksy_sekcji, color = "#1565c0") %>%
+  bold(i = indeksy_sekcji) %>%
+  
+  # FORMATAWANIE TEKSTU I WYRÓWNANIE
+  align(align = "center", part = "all") %>%
+  align(j = 1, align = "left", part = "all") %>%
+  
+  # Pogrubienie wiersza
+  bold(i = 1) %>%
+  
+  # ESTETYKA
+  border_inner_h(border = officer::fp_border(color = "#dcdcdc", width = 1)) %>%
+  fix_border_issues() %>%
+  autofit() %>%
+  set_caption("Tabela: Profil studentów z uwzględnieniem statusu stypendialnego")
+
+# Wyświetlenie gotowej tabeli
+ft
 ```
+
+### Analiza opisowa według stypendium
+
+**1. Charakterystyka osiągnięć akademickich (GPA)**
+Dane wskazują na dużą spójność obu grup w zakresie wyników nauczania. Średnia ocen (GPA) niestypendystów (68,48) jest niemal identyczna z wynikiem stypendystów (67,78). Sugeruje to, że w badanej populacji status stypendialny nie zależy wyłącznie od ocen, co może wskazywać na istotną rolę kryteriów socjalnych w procesie przyznawania wsparcia finansowego.
+
+**2. Struktura demograficzna i reprezentacja płci**
+Wyniki ujawniają wyraźną różnicę w rozkładzie płci wśród osób otrzymujących pomoc finansową. W grupie stypendystów odnotowano znaczną przewagę mężczyzn (60%), podczas gdy u niestypendystów podział ten jest bardziej wyrównany (53,5% vs 46,5%). Taka struktura może wynikać ze specyfiki sytuacji materialnej badanych grup lub uwarunkowań systemowych na danym wydziale.
+
+**3. Inwestycja czasu w samokształcenie: Nauka**
+Stypendyści wykazują wyższą dyscyplinę i większy nakład pracy własnej. W tej grupie nikt nie zadeklarował braku nauki (0% vs 5,7% u niestypendystów), a ponad 35% osób uczy się powyżej 8 godzin tygodniowo. Świadczy to o silnej motywacji stypendystów do utrzymania dobrych wyników i dbałości o status studenta.
+
+**4. Styl życia i organizacja czasu: Imprezowanie**
+Sposób spędzania czasu wolnego przez stypendystów wskazuje na efektywne zarządzanie czasem. Znacznie częściej wybierają oni model odpoczynku skumulowany w weekendy (35,6% vs 26,6%), co pozwala im na pełną koncentrację na obowiązkach akademickich w ciągu tygodnia roboczego.
+
+**Podsumowanie:**
+Profil stypendysty wyłaniający się z danych to profil studenta o wysokiej dyscyplinie pracy i umiejętności optymalizacji czasu wolnego. Choć średnie oceny obu grup są porównywalne, stypendyści wyróżniają się większym zaangażowaniem w naukę własną oraz bardziej ustrukturyzowanym stylem życia, co sprzyja stabilności ich wyników akademickich.
 
 
 # Analiza korelacji
