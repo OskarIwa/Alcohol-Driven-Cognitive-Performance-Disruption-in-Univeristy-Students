@@ -172,7 +172,7 @@ slownik <- data.frame(
   )
 )
 
-# Generowanie ładnej tabeli
+# Generowanie tabeli
 kable(slownik, 
       col.names = c("Nazwa zmiennej", "Opis zmiennej"),
       caption = "Tabela 1: Słownik zmiennych") %>%
@@ -197,10 +197,10 @@ gg_miss_var(dane, show_pct = TRUE) +
 
 ```
 
-Przed przystąpieniem do imputacji (uzupełniania) danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar` i `ggmice`. Pozwoliło to na podjęcie kluczowych decyzji:
+Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar` i `ggmice`. Pozwoliło to na podjęcie kluczowych decyzji:
 
-1. **Eliminacja rekordów:** Usunięto obserwacje posiadające braki w kluczowych zmiennych strukturalnych: `sex` (płeć), `faculty` (wydział) oraz `last_year` (rok studiów). Zmienne te definiują profil studenta i są trudne do wiarygodnego, sztucznego odtworzenia.
-2. **Identyfikacja mechanizmu braków:** Potwierdzono, że część braków ma charakter strukturalny (wspomniani studenci pierwszego roku), co wyklucza prostą imputację średnią dla całej populacji.
+1. **Eliminacja rekordów:** Usunięto obserwacje posiadające braki w kluczowych zmiennych strukturalnych: `sex` (płeć), `faculty` (wydział) oraz `last_year` (rok studiów). Zmienne te definiują profil studenta i są trudne do wiarygodnego odtworzenia metodami statystycznymi.
+2. **Identyfikacja mechanizmu braków:** Potwierdzono, że część braków ma charakter strukturalny (np. brak ocen z poprzedniego roku dla studentów pierwszego roku), co wyklucza prostą imputację średnią dla całej populacji.
 
 ```{r imputacja danych, warning=FALSE, include=FALSE}
 dane_imp <- kNN(dane, variable = c("grade_last_y", "grade_12", "accomodation", "allowance", "scholarship", "studying", "classes_missed", "modules_failed"), k = 5)
@@ -226,26 +226,26 @@ Pozostałe braki danych (w zmiennych takich jak `allowance`, `scholarship` czy `
 
 **Dobór parametru $k=5$:**
 
-Zdecydowano się na ustawienie parametru liczby sąsiadów na $k=5$. Jest to optymalny kompromis:
+Decyzja o wyborze 5 sąsiadów wynika z konieczności zachowania równowagi między wariancją a obciążeniem estymatora:
 
-* Wartość ta jest wystarczająco duża, aby zminimalizować wpływ pojedynczych wartości odstających (szumu w danych).
-* Jednocześnie jest wystarczająco mała, aby zachować lokalną strukturę danych i nie doprowadzić do nadmiernego "wygładzenia" (uśrednienia) specyficznych cech studentów.
+* **Ryzyko zbyt małego k - Wysoka wariancja:** Przy zbyt małej liczbie sąsiadów imputacja jest niestabilna i nadmiernie wrażliwa na pojedyncze wartości odstające (szum w danych).
+* **Ryzyko zbyt dużego k - Wysokie obciążenie:** Zbyt duża liczba sąsiadów prowadzi do nadmiernego uśredniania ("wygładzania"), co zaciera lokalne, specyficzne struktury danych.
+* **Optimum:** Wartość $k=5$ jest bezpiecznym kompromisem, pozwalającym na stabilną predykcję przy zachowaniu zmienności populacji.
 
-Dla zmiennej `grade_last_y` zastosowano podejście hybrydowe: imputacja została przeprowadzona, a następnie skorygowana logicznie dla studentów pierwszego roku, aby nie przypisywać im sztucznych ocen z okresu, gdy nie studiowali.
+Dla zmiennej `grade_last_y` zastosowano podejście hybrydowe: imputacja została skorygowana logicznie dla studentów pierwszego roku, aby nie przypisywać im ocen z okresu, gdy jeszcze nie studiowali. Zmienne czysto osobiste (`relationship`, `parents_alcohol_approval` oraz `relationship_w_parents`) pozostawiono bez zmian ze względu na ryzyko błędu predykcji.
 
-Dodatkowo braki pozostawiono w zmiennych takich jak: `relationship`, `parents_alcohol_approval` oraz `relationship_w_parents` ze względu na trudność przewidzenia tak osobistych danych przez metody imputacji. 
 
 ```{r wizualizacja imputacji, echo=FALSE, fig.height=6, fig.show='hold', warning=FALSE, out.width='50%'}
-#jakość imputcji
+#jakość imputacji
 
 ggplot(dane_imp, aes(x = allowance, y = grade_12, color = allowance_imp)) +
   geom_jitter(alpha = 0.6, width = 0.2, size = 2.5) +
   scale_color_manual(values = c("skyblue3", "firebrick1"), 
                      labels = c("Oryginalne", "Imputowane")) +
-  labs(title = "Weryfikacja imputacji: Miesięczny budżet (allowance)",
+  labs(title = "Weryfikacja imputacji: Miesięczny budżet",
        subtitle = "Rozkład ocen względem budżetu z zaznaczeniem wartości uzupełnionych",
-       x = "Kategoria budżetu (allowance)",
-       y = "Średnia ocen (grade_12)",
+       x = "Kategoria budżetu",
+       y = "Średnia ocen",
        color = "Status danych") +
   theme_minimal()
 
@@ -253,19 +253,19 @@ ggplot(dane_imp, aes(x = accomodation, y = grade_12, color = accomodation_imp)) 
   geom_jitter(alpha = 0.6, width = 0.15, size = 2.5) +
   scale_color_manual(values = c("skyblue3", "firebrick1"), 
                      labels = c("Oryginalne", "Imputowane")) +
-  labs(title = "Weryfikacja imputacji: Zakwaterowanie (accomodation)",
+  labs(title = "Weryfikacja imputacji: Zakwaterowanie",
        subtitle = "Rozkład ocen względem rodzaju zakwaterowania",
        x = "Rodzaj zakwaterowania",
-       y = "Średnia ocen (grade_12)",
+       y = "Średnia ocen",
        color = "Status danych") +
   theme_minimal()
 
 ```
 
 ## Weryfikacja jakości imputacji
-W celu potwierdzenia poprawności działania algorytmu wygenerowano wykresy typu stripplot dla zmiennych `allowance` oraz `accommodation`. Zdecydowaliśmy się akurat na te zmienne ze względu na to, że tylko one mają braki na poziomie co najmniej 5% (oprócz braków strukturalnych w `grade_12`).
+W celu potwierdzenia poprawności działania algorytmu wygenerowano wykresy dla zmiennych `allowance` oraz `accommodation`, które (poza ocenami strukturalnymi) posiadały największy odsetek braków (>5%).
 
-Wybrano zestawienie tych kategorii ze zmienną `grade_12`, aby sprawdzić, czy wartości uzupełnione (zaznaczone na czerwono) naturalnie wpisują się w rozkład danych oryginalnych. Brak wyraźnych skupisk punktów imputowanych poza chmurą danych zaobserwowanych potwierdza, że proces uzupełniania nie wprowadził zniekształceń do struktury zbioru.
+Zestawienie tych kategorii ze zmienną `grade_12` pokazuje, że wartości uzupełnione (oznaczone kolorem czerwonym) naturalnie wpisują się w rozkład danych oryginalnych. Brak nienaturalnych skupisk punktów imputowanych potwierdza, że proces ten nie wprowadził istotnych zniekształceń do struktury zbioru danych.
 
 # Wizualizacja danych
 
