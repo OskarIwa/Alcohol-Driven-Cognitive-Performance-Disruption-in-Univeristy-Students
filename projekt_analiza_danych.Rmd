@@ -1,5 +1,5 @@
 ---
-title: "Alcohol Driven Cognitive Performance Disruption in Univeristy Students"
+title: "Alcohol Driven Cognitive Performance Disruption in University Students"
 author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
 date: "`r Sys.Date()`"
 output: 
@@ -45,15 +45,15 @@ Analiza opiera się na danych ankietowych obejmujących zmienne demograficzne, e
 
 ## Pytania badawcze
 
-W ramach analizy postawiono następujące pytania badawcze, mające na celu zgłębienie mechanizmów rządzących badanym zjawiskiem:
+W ramach analizy postawiono następujące pytania badawcze:
 
 1. **Bezpośredni wpływ alkoholu na wyniki:** Czy istnieje istotna statystycznie, ujemna korelacja między ilością spożywanego alkoholu a średnią ocen (GPA)?
 2. **Rola statusu ekonomicznego:** Czy wyższy dochód rozporządalny (`allowance`) stymuluje intensywniejsze życie towarzyskie, pośrednio wpływając na obniżenie wyników w nauce?
-3. **Środowisko zamieszkania a kultura studencka:** Czy rodzaj zakwaterowania (sektor prywatny/dom rodzinny vs. akademiki) różnicuje siłę związku między spożyciem alkoholu a liczbą opuszczonych zajęć?
+3. **Środowisko zamieszkania a kultura studencka:** Czy rodzaj zakwaterowania różnicuje siłę związku między spożyciem alkoholu a liczbą opuszczonych zajęć?
 4. **Psychospołeczne determinanty:** Czy jakość relacji z rodzicami oraz ich aprobata dla spożywania alkoholu stanowią istotne predyktory ryzykownych zachowań studentów?
 5. **Efekt kompensacji:** Czy zwiększony nakład pracy własnej (dodatkowe godziny nauki w tygodniu) jest w stanie zniwelować negatywny wpływ "imprezowego stylu życia" na średnią ocen?
-6. W jakim stopniu "imprezowy styl życia" zwiększa ryzyko niezdania przedmiotów?
-7. **Różnice międzypłciowe (Gender Gap):** Czy płeć studenta różnicuje wzorce spożycia alkoholu oraz czy moderuje siłę związku między piciem a wynikami w nauce?
+6. **Ryzyko akademickie:** W jakim stopniu "imprezowy styl życia" zwiększa ryzyko niezdania przedmiotów?
+7. **Różnice międzypłciowe (Gender Gap):** Czy płeć studenta różnicuje wzorce spożycia alkoholu i jego wpływ na oceny?
 
 
 ```{r data wrangling, include=FALSE}
