@@ -763,7 +763,7 @@ Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zr�
 Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
 ## Profil studenta w kontekście statusu stypendialnego
-```{r analiza_stypendium_final_v4, echo=FALSE, message=FALSE, warning=FALSE}
+```{r analiza stypendium, echo=FALSE, message=FALSE, warning=FALSE}
 # 1. Przygotowanie danych
 dane_tabs <- dane %>%
   mutate(
@@ -772,101 +772,75 @@ dane_tabs <- dane %>%
                         levels = c("No", "Yes"), 
                         labels = c("Niestypendyści", "Stypendyści"))
   ) %>%
-  select(GPA, Stypendium, Płeć = sex, `Nauka (h)` = studying, Imprezy = partying)
+  select(GPA, Stypendium, sex, studying, partying)
 
-# 2. Statystyki dla GPA (Średnia i SD)
-tab_gpa <- datasummary(GPA ~ Stypendium * (Mean + SD), 
-                       data = dane_tabs, output = "data.frame")
-colnames(tab_gpa) <- c("Cecha", "Mean1", "SD1", "Mean2", "SD2")
-tab_gpa$Cecha <- "Średnia ocen (GPA)"
+# 2. Obliczanie statystyk dla zmiennych ciągłych (GPA)
+stats_gpa <- dane_tabs %>%
+  group_by(Stypendium) %>%
+  summarise(m = round(mean(GPA, na.rm = TRUE), 2),
+            sd = round(sd(GPA, na.rm = TRUE), 2))
 
-# 3. Statystyki dla zmiennych kategorycznych (N i %)
-tab_cat <- datasummary_balance(~Stypendium, data = dane_tabs %>% select(-GPA), 
-                               dinm = FALSE, output = "data.frame")
-tab_cat <- tab_cat[, 1:5]
-colnames(tab_cat) <- c("Cecha", "N1", "Pct1", "N2", "Pct2")
-
-# Usuwamy puste wiersze nagłówkowe wygenerowane przez datasummary
-tab_cat_clean <- tab_cat %>% filter(N1 != "" & !is.na(N1))
-
-# 4. Połączenie wszystkiego w jedną strukturę
-
-# Ujednolicamy nazwy kolumn we wszystkich zbiorach przed łączeniem
-kolumny_cel <- c("Cecha", "Stat1", "Stat2", "Stat3", "Stat4")
-
-# Przygotowanie wiersza z N
-n_row <- data.frame(
-  Cecha = "Liczba obserwacji (N)", 
-  Stat1 = as.character(table(dane_tabs$Stypendium)[1]), 
-  Stat2 = "", 
-  Stat3 = as.character(table(dane_tabs$Stypendium)[2]), 
-  Stat4 = "",
-  stringsAsFactors = FALSE
-)
-
-# Ujednolicenie tab_gpa
-colnames(tab_gpa) <- kolumny_cel
-
-# Ujednolicenie tab_cat_clean
-colnames(tab_cat_clean) <- kolumny_cel
-
-# Funkcja pomocnicza do tworzenia niebieskich pasków nagłówkowych
-make_header <- function(tytul) {
-  setNames(data.frame(tytul, "", "", "", "", stringsAsFactors = FALSE), kolumny_cel)
+# 3. Obliczanie statystyk dla zmiennych kategorycznych
+get_cat_stats <- function(var_name) {
+  dane_tabs %>%
+    group_by(Stypendium, val = !!sym(var_name)) %>%
+    summarise(n = n(), .groups = 'drop') %>%
+    group_by(Stypendium) %>%
+    mutate(pct = round(n / sum(n) * 100, 1)) %>%
+    ungroup()
 }
 
-# Łączenie
-final_df <- rbind(
-  n_row,
-  tab_gpa,
-  make_header("PŁEĆ"),
-  tab_cat_clean[1:2, ],
-  make_header("CZAS NAUKI"),
-  tab_cat_clean[3:7, ],
-  make_header("IMPREZOWANIE"),
-  tab_cat_clean[8:nrow(tab_cat_clean), ]
-)
-# 5. Wykrywanie wierszy nagłówkowych (do pokolorowania sekcji)
-indeksy_sekcji <- which(final_df[[2]] == "" & final_df[[3]] == "")
+p_stats <- get_cat_stats("sex")
+n_stats <- get_cat_stats("studying")
+i_stats <- get_cat_stats("partying")
 
-# 6. Budowa i stylizacja flextable
-ft <- flextable(final_df) %>%
-  # Dodanie górnego, podwójnego nagłówka z nazwami grup
-  add_header_row(
-    values = c("", "NIESTYPENDYŚCI", "STYPENDYŚCI"),
-    colwidths = c(1, 2, 2)
-  ) %>%
-  # Ustawienie czytelnych nazw kolumn pod nagłówkami grup
-  set_header_labels(
-    Stat1 = "Mean(N)", Stat2 = "SD(%)",
-    Stat3 = "Mean(N)", Stat4 = "SD(%)"
-  ) %>%
+# 4. RĘCZNE BUDOWANIE STRUKTURY TABELI
+# Kolumny: Cecha | Mean/N | SD/% | Mean/N  | SD/% 
+
+create_row <- function(name, n1, s1, n2, s2) {
+  data.frame(Cecha = name, N1 = as.character(n1), S1 = as.character(s1), 
+             N2 = as.character(n2), S2 = as.character(s2), stringsAsFactors = FALSE)
+}
+
+final_df <- rbind(
+  create_row("Liczba obserwacji (N)", table(dane_tabs$Stypendium)[1], "", table(dane_tabs$Stypendium)[2], ""),
+  create_row("Średnia ocen (GPA)", stats_gpa$m[1], stats_gpa$sd[1], stats_gpa$m[2], stats_gpa$sd[2]),
   
-  # STYLIZACJA KOLORYSTYCZNA
-  # Główny nagłówek
+  create_row("PŁEĆ", "", "", "", ""),
+  create_row("  Kobieta", p_stats$n[p_stats$val=="Kobieta" & p_stats$Stypendium=="Niestypendyści"], p_stats$pct[p_stats$val=="Kobieta" & p_stats$Stypendium=="Niestypendyści"], p_stats$n[p_stats$val=="Kobieta" & p_stats$Stypendium=="Stypendyści"], p_stats$pct[p_stats$val=="Kobieta" & p_stats$Stypendium=="Stypendyści"]),
+  create_row("  Mężczyzna", p_stats$n[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Niestypendyści"], p_stats$pct[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Niestypendyści"], p_stats$n[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Stypendyści"], p_stats$pct[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Stypendyści"]),
+  
+  create_row("CZAS NAUKI", "", "", "", ""),
+  create_row("  0 h", n_stats$n[n_stats$val=="0" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="0" & n_stats$Stypendium=="Niestypendyści"], "0", "0"),
+  create_row("  1-3 h", n_stats$n[n_stats$val=="1-3" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="1-3" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="1-3" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="1-3" & n_stats$Stypendium=="Stypendyści"]),
+  create_row("  3-5 h", n_stats$n[n_stats$val=="3-5" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="3-5" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="3-5" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="3-5" & n_stats$Stypendium=="Stypendyści"]),
+  create_row("  5-8 h", n_stats$n[n_stats$val=="5-8" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="5-8" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="5-8" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="5-8" & n_stats$Stypendium=="Stypendyści"]),
+  create_row("  8+ h", n_stats$n[n_stats$val=="8+" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="8+" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="8+" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="8+" & n_stats$Stypendium=="Stypendyści"]),
+  
+  create_row("IMPREZOWANIE", "", "", "", ""),
+  create_row("  0 (Abstynencja)", i_stats$n[i_stats$val=="0" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="0" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="0" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="0" & i_stats$Stypendium=="Stypendyści"]),
+  create_row("  1-2 razy", i_stats$n[i_stats$val=="1" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="1" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="1" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="1" & i_stats$Stypendium=="Stypendyści"]),
+  create_row("  Tylko weekendy", i_stats$n[i_stats$val=="Only weekends" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="Only weekends" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="Only weekends" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="Only weekends" & i_stats$Stypendium=="Stypendyści"]),
+  create_row("  3+ razy", i_stats$n[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Niestypendyści"] %>% sum(), i_stats$pct[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Niestypendyści"] %>% sum(), i_stats$n[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Stypendyści"] %>% sum(), i_stats$pct[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Stypendyści"] %>% sum())
+)
+
+# 5. Budowa flextable
+indeksy_sekcji <- which(final_df$N1 == "" & final_df$N2 == "")
+
+ft <- flextable(final_df) %>%
+  add_header_row(values = c("", "NIESTYPENDYŚCI", "STYPENDYŚCI"), colwidths = c(1, 2, 2)) %>%
+  set_header_labels(N1="Mean / N", S1="SD / %", N2="Mean / N", S2="SD / %") %>%
   bg(part = "header", bg = "#1565c0") %>%
   color(part = "header", color = "white") %>%
   bold(part = "header") %>%
-  
-  # Wiersze sekcji
   bg(i = indeksy_sekcji, bg = "#e3f2fd") %>%
   color(i = indeksy_sekcji, color = "#1565c0") %>%
   bold(i = indeksy_sekcji) %>%
-  
-  # FORMATAWANIE TEKSTU I WYRÓWNANIE
   align(align = "center", part = "all") %>%
   align(j = 1, align = "left", part = "all") %>%
-  
-  # Pogrubienie wiersza
-  bold(i = 1) %>%
-  
-  # ESTETYKA
-  border_inner_h(border = officer::fp_border(color = "#dcdcdc", width = 1)) %>%
-  fix_border_issues() %>%
-  autofit() %>%
-  set_caption("Tabela: Profil studentów z uwzględnieniem statusu stypendialnego")
+  bold(i = 1:2) %>%
+  autofit()
 
-# Wyświetlenie gotowej tabeli
 ft
 ```
 
@@ -891,7 +865,7 @@ Profil stypendysty wyłaniający się z danych to profil studenta o wysokiej dys
 ## Typologia zachowań związanych ze spożyciem alkoholu
 Analiza struktury spożycia ujawnia dominujący "styl picia" w badanej grupie. Ilustracja obrazuje deklarowaną liczbę drinków spożywanych **podczas pojedynczego wyjścia towarzyskiego**. $N = 398$
 
-```{r spożycie alkoholu piktogram, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=10, fig.align='center'}
+```{r spożycie alkoholu ilustracja, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=10, fig.align='center'}
 
 # 1. PRZYGOTOWANIE DANYCH
 dane_piktogram <- dane %>%
