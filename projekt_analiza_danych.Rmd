@@ -726,37 +726,41 @@ Mimo koncentracji wyników wokół średniej, w grupie występuje pełne spektru
 **Podsumowanie:**
 Zmienna GPA posiada pożądane właściwości statystyczne (bliskość rozkładu normalnego, brak drastycznych asymetrii), co czyni ją wiarygodnym wskaźnikiem do dalszych analiz korelacyjnych, np. w kontekście badania wpływu konsumpcji alkoholu na efektywność akademicką.
 
+## Porównanie wyników kobiet i mężczyzn
+Zastosowanie wizualizacji typu *Raincloud Plot*  łączącej estymator gęstości jądrowej, wykres pudełkowy oraz surowe dane punktowe pozwala na wielowymiarową ocenę zależności między płcią a efektywnością kształcenia.
+
 ```{r rozklad ocen wzgledem plci, echo=FALSE}
 # Przygotowanie danych
 dane_rain <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(sex), !is.na(GPA))
 
-# Wykres
+# Wykres Raincloud
 ggplot(dane_rain, aes(x = sex, y = GPA, fill = sex)) +
-  # 1. "Chmura" - Gęstość
-  stat_halfeye(
-    adjust = .5, width = .6, .width = 0, justification = -.3, point_colour = NA
-  ) +
-  # 2. "Pudełko" - Boxplot
-  geom_boxplot(
-    width = .15, outlier.shape = NA, alpha = 0.5
-  ) +
-  # 3. "Deszcz" - Surowe dane
-  geom_point(
-    aes(color = sex),
-    position = position_jitter(width = .15), size = .5, alpha = .3
-  ) +
-  scale_fill_tq() +
-  scale_color_tq() +
-  labs(
-    title = "Rozkład ocen względem płci",
-    x = "Płeć", y = "Wynik akademicki (%)"
-  ) +
-  coord_flip() + # Obrócenie dla lepszego efektu "chmury"
-  theme_tq() +
+  stat_halfeye(adjust = .5, width = .6, .width = 0, justification = -.3, point_colour = NA) +
+  geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+  geom_point(aes(color = sex), position = position_jitter(width = .05), size = 1, alpha = 0.4) +
+  scale_fill_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "royalblue4")) +
+  scale_color_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "royalblue4")) +
+  labs(title = "Rozkład ocen względem płci",
+       x = "", y = "Wynik akademicki (%)") +
+  coord_flip() +
+  theme_minimal() +
   theme(legend.position = "none")
 ```
+
+### Analiza porównawcza struktury ocen w podziale na płeć
+**1. Przeciętny poziom wyników (Mediana)**
+Analiza środkowych wartości na wykresach pokazuje, że przeciętny poziom ocen jest niemal identyczny dla obu płci. Zarówno kobiety, jak i mężczyźni osiągają medianę wyników w okolicach 68%. Oznacza to, że w badanej grupie płeć nie determinuje tego, czy ktoś uczy się przeciętnie lepiej, czy gorzej.
+
+**2. Kształt rozkładu ocen**
+Krzywe widoczne nad wykresami mają bardzo zbliżony kształt dla obu grup. Wskazuje to, że struktura ocen jest analogiczna, zarówno wśród kobiet, jak i mężczyzn najliczniejsze grupy studentów uzyskują podobne wyniki. Nie widać tutaj zjawiska, w którym jedna z płci dominowałaby wyraźnie w grupie najlepszych lub najsłabszych studentów.
+
+**3. Zróżnicowanie i rozpiętość wyników**
+Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zróżnicowane postawy. Zarówno wśród kobiet, jak i mężczyzn znajdziemy osoby z wynikami bardzo wysokimi, jak i pojedyncze przypadki wyników skrajnie niskich (poniżej 40%). Zakres zmienności jest porównywalny, co potwierdza, że poziom zróżnicowania wiedzy jest niezależny od płci.
+
+**Pdsumowanie:**
+Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
 ```{r analiza opisowa wedlug stypendium, echo=FALSE}
 # Selekcja kluczowych zmiennych do tabeli
