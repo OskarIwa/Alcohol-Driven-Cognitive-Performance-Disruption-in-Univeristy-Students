@@ -342,11 +342,14 @@ ggplotly(p, tooltip = "text")
 ```
 
 **Interpretacja wykresu:**
+
 Wykres przedstawia przestrzeń zachowań studentów rozpiętą na dwóch głównych wymiarach (składowych głównych):
-1.  **Oś X (Wymiar 1 - Styl Życia):** Odpowiada głównie za intensywność życia towarzyskiego. Im dalej w prawo, tym częstsze imprezy i wyższe spożycie alkoholu.
-2.  **Oś Y (Wymiar 2 - Wyniki):** Koreluje z efektywnością akademicką. Im wyżej, tym wyższe oceny i większy nakład pracy własnej.
+
+1. **Oś X (Wymiar 1 - Styl Życia):** Odpowiada głównie za intensywność życia towarzyskiego. Im dalej w prawo, tym częstsze imprezy i wyższe spożycie alkoholu.
+2. **Oś Y (Wymiar 2 - Wyniki):** Koreluje z efektywnością akademicką. Im wyżej, tym wyższe oceny i większy nakład pracy własnej.
 
 **Zidentyfikowane grupy:**
+
 * **Imprezowicz (Czerwony):** Grupa dominująca w prawej części wykresu. Charakteryzuje się wysoką aktywnością towarzyską, co często wiąże się z niższymi wynikami w nauce (ujemna korelacja).
 * **Prymus (Niebieski):** Skupiony w górnej części wykresu. Studenci ci poświęcają najwięcej czasu na naukę i osiągają najwyższe średnie (GPA), kosztem ograniczonego życia towarzyskiego.
 * **Przeciętniak (Zielony):** Grupa środkowa, balansująca między dwiema skrajnościami. Stanowi ona "bufor" i reprezentuje studentów starających się godzić umiarkowane rozrywki z akceptowalnymi wynikami.
