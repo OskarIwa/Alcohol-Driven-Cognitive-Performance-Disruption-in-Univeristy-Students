@@ -764,7 +764,7 @@ Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego stat
 
 ## Profil studenta w kontekście statusu stypendialnego
 ```{r analiza stypendium, echo=FALSE, message=FALSE, warning=FALSE}
-# 1. Przygotowanie danych
+# 1. PRZYGOTOWANIE DANYCH
 dane_tabs <- dane %>%
   mutate(
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
@@ -774,57 +774,56 @@ dane_tabs <- dane %>%
   ) %>%
   select(GPA, Stypendium, sex, studying, partying)
 
-# 2. Obliczanie statystyk dla zmiennych ciągłych (GPA)
+# 2. STATYSTYKI GPA
 stats_gpa <- dane_tabs %>%
   group_by(Stypendium) %>%
   summarise(m = round(mean(GPA, na.rm = TRUE), 2),
             sd = round(sd(GPA, na.rm = TRUE), 2))
 
-# 3. Obliczanie statystyk dla zmiennych kategorycznych
-get_cat_stats <- function(var_name) {
-  dane_tabs %>%
-    group_by(Stypendium, val = !!sym(var_name)) %>%
-    summarise(n = n(), .groups = 'drop') %>%
-    group_by(Stypendium) %>%
-    mutate(pct = round(n / sum(n) * 100, 1)) %>%
-    ungroup()
+# 3. FUNKCJA POMOCNICZA DLA PROCENTÓW
+get_val <- function(df, variable, value, group, type) {
+  res <- df %>%
+    filter(!!sym(variable) == value & Stypendium == group) %>%
+    summarise(n = n()) %>%
+    pull(n)
+  
+  total <- sum(dane_tabs$Stypendium == group)
+  
+  if(length(res) == 0 || res == 0) return("0")
+  if(type == "n") return(as.character(res))
+  if(type == "pct") return(as.character(round(res/total*100, 1)))
 }
 
-p_stats <- get_cat_stats("sex")
-n_stats <- get_cat_stats("studying")
-i_stats <- get_cat_stats("partying")
-
-# 4. RĘCZNE BUDOWANIE STRUKTURY TABELI
-# Kolumny: Cecha | Mean/N | SD/% | Mean/N  | SD/% 
-
+# 4. RĘCZNE BUDOWANIE TABELI
 create_row <- function(name, n1, s1, n2, s2) {
-  data.frame(Cecha = name, N1 = as.character(n1), S1 = as.character(s1), 
-             N2 = as.character(n2), S2 = as.character(s2), stringsAsFactors = FALSE)
+  data.frame(Cecha = name, N1 = n1, S1 = s1, N2 = n2, S2 = s2, stringsAsFactors = FALSE)
 }
 
 final_df <- rbind(
-  create_row("Liczba obserwacji (N)", table(dane_tabs$Stypendium)[1], "", table(dane_tabs$Stypendium)[2], ""),
-  create_row("Średnia ocen (GPA)", stats_gpa$m[1], stats_gpa$sd[1], stats_gpa$m[2], stats_gpa$sd[2]),
+  create_row("Liczba obserwacji (N)", as.character(table(dane_tabs$Stypendium)[1]), "", as.character(table(dane_tabs$Stypendium)[2]), ""),
+  create_row("Średnia ocen (GPA)", as.character(stats_gpa$m[1]), as.character(stats_gpa$sd[1]), as.character(stats_gpa$m[2]), as.character(stats_gpa$sd[2])),
   
   create_row("PŁEĆ", "", "", "", ""),
-  create_row("  Kobieta", p_stats$n[p_stats$val=="Kobieta" & p_stats$Stypendium=="Niestypendyści"], p_stats$pct[p_stats$val=="Kobieta" & p_stats$Stypendium=="Niestypendyści"], p_stats$n[p_stats$val=="Kobieta" & p_stats$Stypendium=="Stypendyści"], p_stats$pct[p_stats$val=="Kobieta" & p_stats$Stypendium=="Stypendyści"]),
-  create_row("  Mężczyzna", p_stats$n[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Niestypendyści"], p_stats$pct[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Niestypendyści"], p_stats$n[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Stypendyści"], p_stats$pct[p_stats$val=="Mężczyzna" & p_stats$Stypendium=="Stypendyści"]),
+  create_row("  Kobieta", get_val(dane_tabs, "sex", "Kobieta", "Niestypendyści", "n"), get_val(dane_tabs, "sex", "Kobieta", "Niestypendyści", "pct"), get_val(dane_tabs, "sex", "Kobieta", "Stypendyści", "n"), get_val(dane_tabs, "sex", "Kobieta", "Stypendyści", "pct")),
+  create_row("  Mężczyzna", get_val(dane_tabs, "sex", "Mężczyzna", "Niestypendyści", "n"), get_val(dane_tabs, "sex", "Mężczyzna", "Niestypendyści", "pct"), get_val(dane_tabs, "sex", "Mężczyzna", "Stypendyści", "n"), get_val(dane_tabs, "sex", "Mężczyzna", "Stypendyści", "pct")),
   
-  create_row("CZAS NAUKI", "", "", "", ""),
-  create_row("  0 h", n_stats$n[n_stats$val=="0" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="0" & n_stats$Stypendium=="Niestypendyści"], "0", "0"),
-  create_row("  1-3 h", n_stats$n[n_stats$val=="1-3" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="1-3" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="1-3" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="1-3" & n_stats$Stypendium=="Stypendyści"]),
-  create_row("  3-5 h", n_stats$n[n_stats$val=="3-5" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="3-5" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="3-5" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="3-5" & n_stats$Stypendium=="Stypendyści"]),
-  create_row("  5-8 h", n_stats$n[n_stats$val=="5-8" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="5-8" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="5-8" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="5-8" & n_stats$Stypendium=="Stypendyści"]),
-  create_row("  8+ h", n_stats$n[n_stats$val=="8+" & n_stats$Stypendium=="Niestypendyści"], n_stats$pct[n_stats$val=="8+" & n_stats$Stypendium=="Niestypendyści"], n_stats$n[n_stats$val=="8+" & n_stats$Stypendium=="Stypendyści"], n_stats$pct[n_stats$val=="8+" & n_stats$Stypendium=="Stypendyści"]),
+  create_row("CZAS NAUKI [h] ", "", "", "", ""),
+  create_row("  0 ", get_val(dane_tabs, "studying", "0", "Niestypendyści", "n"), get_val(dane_tabs, "studying", "0", "Niestypendyści", "pct"), get_val(dane_tabs, "studying", "0", "Stypendyści", "n"), get_val(dane_tabs, "studying", "0", "Stypendyści", "pct")),
+  create_row("  1-3 ", get_val(dane_tabs, "studying", "1-3", "Niestypendyści", "n"), get_val(dane_tabs, "studying", "1-3", "Niestypendyści", "pct"), get_val(dane_tabs, "studying", "1-3", "Stypendyści", "n"), get_val(dane_tabs, "studying", "1-3", "Stypendyści", "pct")),
+  create_row("  3-5 ", get_val(dane_tabs, "studying", "3-5", "Niestypendyści", "n"), get_val(dane_tabs, "studying", "3-5", "Niestypendyści", "pct"), get_val(dane_tabs, "studying", "3-5", "Stypendyści", "n"), get_val(dane_tabs, "studying", "3-5", "Stypendyści", "pct")),
+  create_row("  5-8 ", get_val(dane_tabs, "studying", "5-8", "Niestypendyści", "n"), get_val(dane_tabs, "studying", "5-8", "Niestypendyści", "pct"), get_val(dane_tabs, "studying", "5-8", "Stypendyści", "n"), get_val(dane_tabs, "studying", "5-8", "Stypendyści", "pct")),
+  create_row("  8+ ", get_val(dane_tabs, "studying", "8+", "Niestypendyści", "n"), get_val(dane_tabs, "studying", "8+", "Niestypendyści", "pct"), get_val(dane_tabs, "studying", "8+", "Stypendyści", "n"), get_val(dane_tabs, "studying", "8+", "Stypendyści", "pct")),
   
-  create_row("IMPREZOWANIE", "", "", "", ""),
-  create_row("  0 (Abstynencja)", i_stats$n[i_stats$val=="0" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="0" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="0" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="0" & i_stats$Stypendium=="Stypendyści"]),
-  create_row("  1-2 razy", i_stats$n[i_stats$val=="1" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="1" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="1" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="1" & i_stats$Stypendium=="Stypendyści"]),
-  create_row("  Tylko weekendy", i_stats$n[i_stats$val=="Only weekends" & i_stats$Stypendium=="Niestypendyści"], i_stats$pct[i_stats$val=="Only weekends" & i_stats$Stypendium=="Niestypendyści"], i_stats$n[i_stats$val=="Only weekends" & i_stats$Stypendium=="Stypendyści"], i_stats$pct[i_stats$val=="Only weekends" & i_stats$Stypendium=="Stypendyści"]),
-  create_row("  3+ razy", i_stats$n[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Niestypendyści"] %>% sum(), i_stats$pct[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Niestypendyści"] %>% sum(), i_stats$n[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Stypendyści"] %>% sum(), i_stats$pct[i_stats$val %in% c("3", "4+") & i_stats$Stypendium=="Stypendyści"] %>% sum())
+  create_row("IMPREZOWANIE/TYDZIEŃ", "", "", "", ""),
+  create_row("  0 ", get_val(dane_tabs, "partying", "0", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "0", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "0", "Stypendyści", "n"), get_val(dane_tabs, "partying", "0", "Stypendyści", "pct")),
+  create_row("  1 raz", get_val(dane_tabs, "partying", "1", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "1", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "1", "Stypendyści", "n"), get_val(dane_tabs, "partying", "1", "Stypendyści", "pct")),
+  create_row("  Tylko weekendy", get_val(dane_tabs, "partying", "Only weekends", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "Only weekends", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "Only weekends", "Stypendyści", "n"), get_val(dane_tabs, "partying", "Only weekends", "Stypendyści", "pct")),
+  create_row("  2 razy", get_val(dane_tabs, "partying", "2", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "2", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "2", "Stypendyści", "n"), get_val(dane_tabs, "partying", "2", "Stypendyści", "pct")),
+  create_row("  3 razy", get_val(dane_tabs, "partying", "3", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "3", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "3", "Stypendyści", "n"), get_val(dane_tabs, "partying", "3", "Stypendyści", "pct")),
+  create_row("  4+ razy", get_val(dane_tabs, "partying", "4+", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "pct"))
 )
 
-# 5. Budowa flextable
+# 5. BUDOWA I STYLIZACJA FLEZTABLE
 indeksy_sekcji <- which(final_df$N1 == "" & final_df$N2 == "")
 
 ft <- flextable(final_df) %>%
