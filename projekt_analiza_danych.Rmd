@@ -108,9 +108,9 @@ W tym etapie surowe dane ankietowe zostały poddane standaryzacji i transformacj
 * **Kodyfikacja zmiennych:**
     * Zmienne binarne (np. płeć, stypendium) przekodowano na format **0-1**.
     * Zmienne opisowe (np. przedziały dochodów, liczba drinków) zamieniono na **skalę porządkową**, co pozwoli na zachowanie hierarchii danych w modelach korelacji.
-* **Logika dla pierwszego roku:** Zidentyfikowano specyficzną grupę studentów pierwszego roku ("12th class"). Ich braki danych w kolumnie ocen z poprzedniego roku akademickiego (`grade_last_y`) nie są błędem, lecz wynikają ze struktury badania (brak historii studiowania). Zostało to uwzględnione w procesie czyszczenia.
-* **Walidacja danych:** Zostały również sprawdzone ograniczenia, które musiały obejmować zmienne i zostały pod tym kątem sprawdzone.
-* **Duplikaty:** Wśród obserwacji były również duplikaty, jednak przez bardzo małą ich ilość (2) założyliśmy, że istnieje możliwość na zaistnienie takiej sytuacji, więc nie zostały one usunięte.
+* **Logika dla pierwszego roku:** Zidentyfikowano specyficzną grupę studentów pierwszego roku ("12th class"). Ich braki danych w kolumnie ocen z poprzedniego roku akademickiego (`grade_last_y`) nie są błędem, lecz wynikają ze struktury badania (brak historii studiowania). Zostało to uwzględnione w procesie imputacji.
+* **Walidacja danych:** Przeprowadzono weryfikację reguł logicznych (np. czy wartości ocen mieszczą się w przedziale 0-100%), wykorzystując pakiet `validate`.
+* **Duplikaty:** Zidentyfikowano 2 duplikaty, jednak ze względu na specyfikę ankiety uznano je za możliwe zbiegi okoliczności (identyczne odpowiedzi różnych osób) i pozostawiono w zbiorze.
 
 ```{r diagnostyka, include=FALSE}
 #sprawdzenie sensu danych 
