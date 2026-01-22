@@ -34,6 +34,8 @@ library(modelsummary)
 library(ggstatsplot)
 library(sjPlot)
 library(car)
+library(scales)
+library(flextable)
 ```
 
 # Wprowadzenie
