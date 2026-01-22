@@ -269,6 +269,9 @@ Zestawienie tych kategorii ze zmienną `grade_12` pokazuje, że wartości uzupe�
 
 # Wizualizacja danych
 
+## Analiza Archetypów Studenckich (PCA + k-means)
+
+W celu identyfikacji wzorców zachowań w populacji studenckiej zastosowano analizę skupień (algorytm *k-means*) wspartą redukcją wymiarowości (PCA). Pozwoliło to na rzutowanie wielowymiarowych danych na płaszczyznę 2D i wyodrębnienie trzech głównych profili studentów.
 ```{r klastrowanie, echo=FALSE}
 # 1. Przygotowanie danych
 dane_clust <- dane %>%
@@ -321,11 +324,8 @@ df_pca <- data.frame(pca$x[,1:2], cluster = factor(km$cluster)) %>%
     )
   )
 
-# 4. Wykres (TU JEST ZMIANA: geom_jitter zamiast geom_point)
+# 4. Wykres
 p <- ggplot(df_pca, aes(x = PC1, y = PC2, color = Archetyp, text = opis_dymka)) +
-  # Używamy jitter, żeby "roztrząsnąć" punkty.
-  # width i height kontrolują, jak bardzo mają się rozsunąć.
-  # Zmniejszyłem też trochę size (na 3), żeby było czytelniej.
   geom_jitter(size = 2, alpha = 0.5, width = 0.12, height = 0.12) +
   scale_color_brewer(palette = "Set1") +
   labs(title = "Mapa Archetypów Studentów",
@@ -340,6 +340,16 @@ p <- ggplot(df_pca, aes(x = PC1, y = PC2, color = Archetyp, text = opis_dymka)) 
 ggplotly(p, tooltip = "text")
 
 ```
+
+**Interpretacja wykresu:**
+Wykres przedstawia przestrzeń zachowań studentów rozpiętą na dwóch głównych wymiarach (składowych głównych):
+1.  **Oś X (Wymiar 1 - Styl Życia):** Odpowiada głównie za intensywność życia towarzyskiego. Im dalej w prawo, tym częstsze imprezy i wyższe spożycie alkoholu.
+2.  **Oś Y (Wymiar 2 - Wyniki):** Koreluje z efektywnością akademicką. Im wyżej, tym wyższe oceny i większy nakład pracy własnej.
+
+**Zidentyfikowane grupy:**
+* **Imprezowicz (Czerwony):** Grupa dominująca w prawej części wykresu. Charakteryzuje się wysoką aktywnością towarzyską, co często wiąże się z niższymi wynikami w nauce (ujemna korelacja).
+* **Prymus (Niebieski):** Skupiony w górnej części wykresu. Studenci ci poświęcają najwięcej czasu na naukę i osiągają najwyższe średnie (GPA), kosztem ograniczonego życia towarzyskiego.
+* **Przeciętniak (Zielony):** Grupa środkowa, balansująca między dwiema skrajnościami. Stanowi ona "bufor" i reprezentuje studentów starających się godzić umiarkowane rozrywki z akceptowalnymi wynikami.
 
 ```{r zrobienie danych, include=FALSE}
 dane_analiza <- dane %>%
@@ -361,7 +371,7 @@ dane_analiza <- dane %>%
     # 2. Grupowanie budżetu
     allow_group = ifelse(allow_val > 4000, "Wysoki budżet", "Niski budżet"),
     
-    # 3. Skala towarzyska (zastępujemy problematyczne recode funkcją case_when)
+    # 3. Skala towarzyska
     party_score = case_when(
       partying == "0" ~ 0,
       partying == "1" ~ 1,
@@ -391,7 +401,7 @@ dane_analiza <- dane %>%
 
 ## Wpływ statusu ekonomicznego na styl życia i wyniki
 
-W tej sekcji postaraliśmy się odpowiedzieć na pytanie badawcze **czy wyższy dochód rozporządzalny stymuluje intensywniejsze życie towarzyskie?**
+W tej sekcji poddano weryfikacji pytanie badawcze: **czy wyższy dochód rozporządzalny stymuluje intensywniejsze życie towarzyskie?**
 
 ```{r pytanie 2, echo=FALSE}
 ggplot(dane_analiza, aes(x = social_index, y = grade_final)) +
@@ -463,6 +473,8 @@ Wizualizacja wykorzystuje metodę estymacji gęstości jądrowej (**2D Kernel De
 
 ## Środowisko zamieszkania a kultura studencka
 
+W tej części analizy sprawdzono, czy rodzaj zakwaterowania (akademik vs. mieszkanie prywatne) moderuje związek między spożyciem alkoholu a absencją na zajęciach. Weryfikujemy hipotezę, czy "kontrola społeczna" w akademikach lub większa swoboda w mieszkaniach prywatnych wpływają na dyscyplinę studentów.
+
 ```{r pytanie 3, echo=FALSE, message=FALSE}
 # 1. Przygotowanie danych (konwersja na skale numeryczne)
 dane_acc <- dane %>%
@@ -518,8 +530,17 @@ ggplot(dane_acc, aes(x = drinks_num, y = missed_num, color = acc_group)) +
   )
 ```
 
+### Interpretacja wyników
+
+Powyższa wizualizacja pozwala ocenić siłę związku między piciem a opuszczaniem zajęć w dwóch różnych środowiskach:
+
+* **Nachylenie linii trendu (Regresja):** Kąt nachylenia linii jest kluczowym wskaźnikiem wrażliwości. **Im bardziej stroma linia**, tym silniejsza jest negatywna korelacja – oznacza to, że w danej grupie każdy dodatkowy drink skutkuje gwałtowniejszym wzrostem liczby opuszczonych godzin.
+* **Rozkład obserwacji (Jitter):** Zastosowanie techniki *jitter* (lekkiego przesunięcia punktów) ujawnia rzeczywiste zagęszczenie danych. Pozwala to zauważyć, że choć średnie mogą być zbliżone, **ekstrema** (osoby pijące bardzo dużo i opuszczające mnóstwo zajęć) mogą częściej występować w jednej ze specyficznych grup.
+* **Wniosek analityczny:** Porównanie obu paneli pozwala zweryfikować, czy mieszkanie w akademiku działa jak **czynnik intensyfikujący** zachowania rozrywkowe (ze względu na presję grupy), czy może to prywatne mieszkanie sprzyja większym zaniedbaniom w nauce poprzez brak zewnętrznej kontroli.
 
 ## Analiza efektu kompensacji
+
+Wykres trójwymiarowy służy do weryfikacji **hipotezy kompensacji**. Badamy interakcję trzech zmiennych jednocześnie: intensywności życia towarzyskiego (oś X), nakładu pracy własnej (oś Y) oraz wyników w nauce (oś Z). Szukamy odpowiedzi na kluczowe pytanie: **czy dodatkowe godziny nauki są w stanie zneutralizować negatywny wpływ intensywnego imprezowania na średnią ocen (GPA)?**
 
 ```{r pytanie 5, echo=FALSE, warning=FALSE}
 # 1. Przygotowanie danych z nowymi nazwami zmiennych
@@ -574,11 +595,17 @@ plot_ly(dane_3d,
   )
 ```
 
+### Interpretacja modelu 3D
 
+Analiza przestrzenna pozwala na sformułowanie następujących spostrzeżeń dotyczących strategii studentów:
 
-
+* **Strefa sukcesu (Kolor żółty):** Najwyższe wyniki (szczyt osi Z) koncentrują się w obszarze, gdzie **wysoki nakład nauki** spotyka się z **niską lub umiarkowaną intensywnością imprez**.
+* **Granice kompensacji:** Choć zwiększenie liczby godzin nauki (przesunięcie wzdłuż osi Y) pozytywnie wpływa na wynik, **nie jest w stanie w pełni zniwelować** skutków ekstremalnego imprezowania. W rogu wykresu odpowiadającym maksymalnej rozrywce – nawet przy dużej ilości nauki – dominują kolory ciemniejsze (niższe oceny).
+* **Wniosek analityczny:** Model sugeruje występowanie **prawa malejących przychodów**. Dodatkowa nauka jest skuteczna, ale przy bardzo intensywnym życiu towarzyskim jej efektywność drastycznie spada – prawdopodobnie ze względu na obniżoną koncentrację i kondycję psychofizyczną, której nie da się po prostu "zauczyć".
 
 ## Różnice międzypłciowe
+
+Analiza wpływu alkoholu na wyniki byłaby niepełna bez uwzględnienia czynników demograficznych. Poniższy wykres weryfikuje, czy płeć studenta różnicuje odporność na akademickie skutki życia towarzyskiego oraz czy dynamika spadku ocen jest uniwersalna dla obu grup.
 
 ```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
 # 1. DANE
@@ -591,14 +618,14 @@ srednie_df <- dane_plot %>%
   group_by(sex, drinks) %>%
   summarise(srednia_ocena = mean(grade_last_y), .groups = "drop")
 
-# 3. KOLORYSTYKA "MODERN TECH"
+# 3. KOLORYSTYKA
 my_colors <- c("Kobieta" = "#FF2D55",  # Apple Pink / Coral
                "Mężczyzna" = "#007AFF") # Apple Blue
 
 # 4. WYKRES BAZOWY
 p <- ggplot() +
   
-  # A. SKRZYPCE (TŁO)
+  # A. SKRZYPCE 
   geom_violin(data = dane_plot, 
               aes(x = drinks, y = grade_last_y, color = sex, fill = sex),
               alpha = 0.1,            # Bardzo delikatne tło, żeby nie przytłaczało
@@ -619,7 +646,7 @@ p <- ggplot() +
                  text = paste0("<b>", sex, "</b>",
                                "<br>Liczba drinków: ", drinks,
                                "<br>Średnia ocena: ", round(srednia_ocena, 1))),
-             size = 3.5, shape = 18, # Nieco większe punkty dla czytelności
+             size = 3.5, shape = 18, 
              position = position_dodge(width = 0.7)) +
   
   # D. ESTETYKA
@@ -634,7 +661,7 @@ p <- ggplot() +
     legend.position = "none"
   )
 
-# 5. FINALNY PLOTLY + FIX DYMKÓW (NUCLEAR OPTION)
+# 5. FINALNY PLOTLY
 final_tech <- ggplotly(p, tooltip = "text") %>%
   layout(
     font = list(family = "Arial, sans-serif", size = 12, color = "#333333"),
@@ -661,6 +688,14 @@ for (i in seq_along(final_tech$x$data)) {
 
 final_tech
 ```
+
+### Interpretacja wyników
+
+Wizualizacja ta jest złożona, ponieważ łączy analizę średnich (linie) z pełnym rozkładem danych (wykresy skrzypcowe w tle).
+
+* **Zbieżność trendów:** Obie linie trendu wykazują wyraźną tendencję spadkową. Oznacza to, że niezależnie od płci, zwiększona konsumpcja alkoholu koreluje z obniżeniem wyników w nauce.
+* **Analiza dystrybucji (Skrzypce):** Tło wykresu pokazuje, że w grupach o wysokim spożyciu ("5-8" oraz "8+") rozrzut wyników jest znacznie większy. Oznacza to, że choć średnia spada, zdarzają się jednostki (wąskie "szczyty" skrzypiec), które mimo imprezowania utrzymują wysokie oceny – jednak jest to margines błędu statystycznego.
+* **Wniosek końcowy:** Płeć **nie jest silnym moderatorem** tej zależności. Krzywe dla kobiet i mężczyzn przebiegają niemal równolegle, co sugeruje, że mechanizm negatywnego wpływu alkoholu na zdolności kognitywne jest uniwersalny i niezależny od płci biologicznej.
 
 # Analiza opisowa
 
