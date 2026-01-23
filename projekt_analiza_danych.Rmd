@@ -563,11 +563,11 @@ ggplot(dane_risk, aes(x = drinks_num, y = pct_risk, group = acc_group)) +
 
 ### Interpretacja wyników
 
-Powyższa wizualizacja pozwala ocenić siłę związku między piciem a opuszczaniem zajęć w dwóch różnych środowiskach:
+Poniższa wizualizacja koncentruje się na **analizie ryzyka**. Oś Y pokazuje odsetek studentów, którzy przekroczyli "bezpieczny próg" absencji (2 lub więcej opuszczonych zajęć), w zależności od intensywności życia towarzyskiego.
 
-* **Nachylenie linii trendu (Regresja):** Kąt nachylenia linii jest kluczowym wskaźnikiem wrażliwości. **Im bardziej stroma linia**, tym silniejsza jest negatywna korelacja – oznacza to, że w danej grupie każdy dodatkowy drink skutkuje gwałtowniejszym wzrostem liczby opuszczonych godzin.
-* **Rozkład obserwacji (Jitter):** Zastosowanie techniki *jitter* (lekkiego przesunięcia punktów) ujawnia rzeczywiste zagęszczenie danych. Pozwala to zauważyć, że choć średnie mogą być zbliżone, **ekstrema** (osoby pijące bardzo dużo i opuszczające mnóstwo zajęć) mogą częściej występować w jednej ze specyficznych grup.
-* **Wniosek analityczny:** Porównanie obu paneli pozwala zweryfikować, czy mieszkanie w akademiku działa jak **czynnik intensyfikujący** zachowania rozrywkowe (ze względu na presję grupy), czy może to prywatne mieszkanie sprzyja większym zaniedbaniom w nauce poprzez brak zewnętrznej kontroli.
+* **Punkt krytyczny (Eskalacja):** Do poziomu "5-8 drinków" obie grupy zachowują się podobnie – ryzyko wysokiej absencji oscyluje wokół 30-36%. Kluczowa różnica pojawia się przy ekstremalnym spożyciu ("8+").
+* **Efekt akademika:** W środowisku akademika następuje gwałtowna "eksplozja" ryzyka – aż **70%** intensywnie imprezujących studentów zaniedbuje zajęcia. Krzywa wznosi się tu znacznie bardziej stromo niż w przypadku mieszkań prywatnych (gdzie wskaźnik ten zatrzymuje się na **47%**).
+* **Wniosek środowiskowy:** Dane sugerują, że akademik stanowi **środowisko sprzyjające eskalacji** zachowań skrajnych. Prawdopodobnie "efekt domina" i obecność współlokatorów sprawiają, że po ostrych imprezach znacznie trudniej jest zmobilizować się do pójścia na uczelnię niż w cichszym mieszkaniu prywatnym.
 
 ## Analiza efektu kompensacji
 
