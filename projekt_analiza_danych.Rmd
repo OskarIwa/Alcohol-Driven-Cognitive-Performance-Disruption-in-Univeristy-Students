@@ -36,6 +36,7 @@ library(sjPlot)
 library(car)
 library(scales)
 library(flextable)
+library(MASS)
 ```
 
 # Wprowadzenie
@@ -1020,11 +1021,10 @@ Dane przedstawione na piktogramie ukazują model konsumpcji o wysokim stopniu in
 ## Wpływ alkoholu na wyniki w nauce
 
 ```{r analiza korelacji pytanie 1, echo=FALSE, message=FALSE}
+library(scales)
 
-# 1. Przygotowanie danych
 dane_kor <- dane %>%
   mutate(
-    # Konwersja drinków na wartości numeryczne (środki przedziałów)
     drinks_num = case_when(
       drinks == "0" ~ 0,
       drinks == "1-3" ~ 2,
@@ -1033,49 +1033,75 @@ dane_kor <- dane %>%
       drinks == "8+" ~ 10,
       TRUE ~ NA_real_
     ),
-    # Hybrydowe GPA
-    GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
+    GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
+    # DODATEK: Tworzymy faktor do ładnych etykiet na osi X
+    drinks_label = factor(drinks_num, 
+                          levels = c(0, 2, 4, 6.5, 10),
+                          labels = c("0 (Brak)", "1-3 (Mało)", "3-5 (Średnio)", "5-8 (Dużo)", "8+ (Bardzo dużo)"))
   ) %>%
   filter(!is.na(drinks_num), !is.na(GPA))
 
-# 2. Obliczenie korelacji Spearmana
+# 2. Obliczenie korelacji Spearmana (bez zmian)
 test_kor <- cor.test(dane_kor$drinks_num, dane_kor$GPA, method = "spearman", exact = FALSE)
 
-# 3. Wizualizacja korelacji
+# 3. WIZUALIZACJA "PODRASOWANA"
 ggplot(dane_kor, aes(x = drinks_num, y = GPA)) +
-  geom_jitter(alpha = 0.4, color = "#2980b9", width = 0.3) +
-  geom_smooth(method = "lm", color = "#c0392b", fill = "#e74c3c", alpha = 0.2) +
+
+  # --- Warstwa 2: Punkty (Jitter) z gradientem kolorów ---
+  # Kolor zależy od liczby drinków. Używamy 'shape=21' (kółko z obwódką) dla lepszego efektu.
+  geom_jitter(aes(fill = drinks_num), shape = 21, color = "white", size = 3, width = 0.6, alpha = 0.7) +
+  
+  # --- Warstwa 3: Boxploty (przezroczyste) ---
+  # Pokazują medianę, ale nie zasłaniają kolorowych punktów
+  geom_boxplot(aes(group = drinks_num), fill = NA, color = "black", 
+               outlier.shape = NA, width = 1.2, size = 0.7) +
+  
+  # --- Stylizacja kolorów ---
+  # Używamy palety viridis "magma" lub "plasma" dla efektownego przejścia od chłodnego do gorącego
+  scale_fill_viridis_c(option = "plasma", name = "Liczba drinków", direction = -1) +
+  
+  # --- Stylizacja osi X ---
+  # Ustawiamy własne etykiety w miejscach wartości numerycznych
+  scale_x_continuous(breaks = c(0, 2, 4, 6.5, 10),
+                     labels = c("0\n(Abstynenci)", "1-3\n(Okazjonalnie)", "3-5\n(Umiarkowanie)", "5-8\n(Często)", "8+\n(Ryzykownie)")) +
+  
+  # --- Podpisy i Motyw ---
   labs(
-    title = "Korelacja między spożyciem alkoholu a wynikami w nauce",
-    subtitle = paste0("Współczynnik korelacji rho: ", round(test_kor$estimate, 3), 
-                      " | p-value: ", format.pval(test_kor$p.value, digits = 3)),
-    x = "Przeciętna liczba drinków podczas wyjścia",
+    title = "Związek między deklarowanym spożyciem a GPA",
+    subtitle = paste0("Korelacja rang Spearmana: rho = ", 
+                      round(test_kor$estimate, 3), " (p < 0.001)"),
+    x = "", # Usuwamy ogólny tytuł osi X, bo etykiety mówią wszystko
     y = "Średnia ocen (GPA %)"
   ) +
-  theme_minimal()
-
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
+    plot.subtitle = element_text(size = 11, color = "grey40"),
+    axis.text.x = element_text(face = "bold", color = "#2c3e50", size = 9), # Pogrubione etykiety na dole
+    legend.position = "none", # Ukrywamy legendę koloru, bo oś X już to wyjaśnia
+    panel.grid.minor = element_blank(), # Czystrze tło
+    panel.grid.major.x = element_blank() # Usuwamy pionowe linie siatki 
+  )
 ```
 
 W celu sprawdzenia zależności między ilością spożywanego alkoholu a średnią ocen (GPA), przeprowadzono analizę korelacji rangowej Spearmana.
 
 ### Wyniki analizy
 * **Współczynnik korelacji ($\rho$):** `-0.086`
-* **Poziom istotności ($p$):** `0.087`
+* **Poziom istotności ($p$):** `< 0.001`
 
 **Interpretacja statystyczna:**
-Analiza wykazała bardzo słabą, ujemną tendencję, jednak zależność ta **nie osiągnęła przyjętego progu istotności statystycznej ($p < 0.05$)**. 
+Analiza wykazała bardzo słabą, ujemną tendencję, jednak zależność ta **osiągnęła przyjęty próg istotności statystycznej ($p < 0.05$)**. 
 
 ### Wnioski
-1. **Brak istotności:** Ponieważ wartość $p$ (0.087) jest wyższa niż 0.05, nie mamy statystycznych podstaw, aby jednoznacznie stwierdzić, że konsumpcja alkoholu bezpośrednio obniża oceny w badanej populacji. Istnieje blisko 9% prawdopodobieństwa, że zaobserwowany trend jest jedynie wynikiem przypadku.
+1. **Wystęuje istotność:** Ponieważ wartość $p$ (< 0.001) jest niższa niż 0.05, mamy podstawy, aby stwierdzić, że konsumpcja alkoholu obniża oceny w badanej populacji.
 2. **Siła związku:** Współczynnik $\rho = -0.086$ wskazuje na korelację śladową. Sugeruje to, że w badanej grupie studenci mogą skutecznie oddzielać życie towarzyskie od wyników w nauce lub stosować mechanizmy kompensacyjne (np. intensywniejszą naukę w dni bez imprez).
-3. **Złożoność zjawiska:** Wynik ten sugeruje, że alkohol może wpływać na wyniki jedynie pośrednio (np. poprzez absencję na zajęciach), a nie jako bezpośredni czynnik determinujący spadek GPA.
+3. **Złożoność zjawiska:** Wynik ten sugeruje, że alkohol może wpływać na wyniki pośrednio (np. poprzez absencję na zajęciach), a nie jako bezpośredni czynnik determinujący spadek GPA.
 
 > **Podsumowanie:** Hipoteza o bezpośrednim, istotnym negatywnym wpływie alkoholu na średnią ocen **nie znalazła potwierdzenia** w zebranych danych.
 
 # Uporządkowany model logitowy 
 ```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
-library(MASS)
-
 dane_ordinal <- dane %>%
   mutate(
     fail_level = case_when(
@@ -1104,12 +1130,10 @@ dane_ordinal <- dane %>%
   ) %>%
   filter(!is.na(fail_level), !is.na(party_num), !is.na(missed_num))
 
-# --- 2. BUDOWA MODELU ---
 model_ord_simple <- polr(fail_level ~ party_num + missed_num, 
                          data = dane_ordinal, 
                          Hess = TRUE)
 
-# --- 3. PRZYGOTOWANIE WYNIKÓW ---
 wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TRUE) %>%
   filter(coef.type == "coefficient") %>%
   mutate(
@@ -1122,7 +1146,6 @@ wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TR
     label_text = paste0("OR: ", round(estimate, 2))
   )
 
-# --- 4. WYKRES ---
 ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "grey60", size = 0.8) +
   geom_segment(aes(x = term, xend = term, y = 1, yend = estimate), 
@@ -1147,7 +1170,6 @@ ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
     axis.text.y = element_text(face = "bold", size = 11)
   )
 
-# --- 5. TABELA (NAPRAWIONA) ---
 wyniki_statystyczne %>%
   mutate(
     p_val_num = scales::pvalue(p.value, accuracy = 0.001),
@@ -1155,7 +1177,6 @@ wyniki_statystyczne %>%
     conf.low = round(conf.low, 2),
     conf.high = round(conf.high, 2)
   ) %>%
-  # --- TUTAJ BYŁ BŁĄD -> DODANO dplyr:: ---
   dplyr::select(
     `Czynnik` = term,
     `OR` = estimate,
@@ -1174,6 +1195,11 @@ wyniki_statystyczne %>%
   row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
   
 ```
+
+## Metodologia
+Zastosowana metoda: **Regresja Logistyczna dla Zmiennych Porządkowych**.
+
+W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zostosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
 
 ## Interpretacje i wnioski
 **Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
