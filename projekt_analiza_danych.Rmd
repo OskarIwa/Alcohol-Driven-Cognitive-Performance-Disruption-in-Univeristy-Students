@@ -1332,7 +1332,7 @@ W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, z
 
 # Wnioskowanie statystyczne
 
-Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mieszkania prywatnego. Została zbadana różnica w wynikach w ostatnim roku dla studentów, którzy są teraz przynajmniej na 2 roku.
+## Porównanie GPA względem miejsca zamieszkania
 
 ```{r wnioskowanie statystyczne akademiki vs GPA, echo=FALSE, warning=FALSE}
 # Wykorzystujemy test Wilcoxona (odporny na brak rozkładu normalnego)
@@ -1341,12 +1341,36 @@ test_wynik <- wilcox.test(grade_last_y ~ accomodation, data = dane)
 # Wizualizacja
 ggplot(dane, aes(x = accomodation, y = grade_last_y, fill = accomodation)) +
   geom_boxplot(alpha = 0.7) +
-  labs(title = "Porównanie GPA względem miejsca zamieszkania",
-       subtitle = paste("p-value =", round(test_wynik$p.value, 4))) +
+  labs(subtitle = paste("p-value =", round(test_wynik$p.value, 4)),
+    x = "Zakwaterowanie",
+    y = "GPA w roku poprzednim",
+    fill = "Zakwaterowanie"
+  ) +
+  scale_x_discrete(
+    labels = c(
+      "Nonprivate" = "Nieprywatne",
+      "Private" = "Prywatne"
+    )
+  ) +
+  scale_fill_discrete(
+    labels = c(
+      "Nonprivate" = "Nieprywatne",
+      "Private" = "Prywatne"
+    )
+  ) +
   theme_minimal()
 ```
 
+Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mieszkania prywatnego. Została zbadana różnica w wynikach w ostatnim roku dla studentów, którzy są teraz przynajmniej na 2 roku.
 
+### Interpretacja wyników i wnioski
+* Wynik testu Wilcoxona wskazuje na **p-value = 0.6482 > 0,05**, zatem nie ma podstaw do odrzucenia hipotezy zerowej i można uznać, że nie stwierdzono istotnej statystycznie różnicy w średnich i medianach.
+* Rozkłady wyników są **bardzo podobne** w obu grupach; mediany GPA są zbliżone, a rozstępy międzykwartylowe są porównywalne.
+* W grupie "Private" widoczna jest pojedyncza wartość odstająca (outlier), jednak nie wpływa ona na ogólny wniosek o braku istotnych różnic między grupami.
+
+>**Wniosek**:Podsumowując, miejsce zamieszkania (prywatne vs. nieprywatne) **nie ma istotnego wpływu** na wyniki w nauce (GPA) w badanej próbie studentów.
+
+## Zależność między aprobatą rodziców wobec spożywania alkoholu a tygodniowym poziomem jego konsumpcji
 
 ```{r pytanie 4 wykres test chi kwadrat, echo=FALSE, warning=FALSE}
 # 1. Przygotowanie tabeli kontyngencji i testu
@@ -1363,10 +1387,18 @@ dane %>%
   geom_tile(color = "white") +
   scale_fill_gradient(low = "#f7fbff", high = "#084594") +
   geom_text(aes(label = paste0(round(procent, 1), "%")), color = "black", size = 3) +
-  labs(title = "Relacja: Aprobata rodziców vs Spożycie alkoholu",
-       x = "Liczba drinków", y = "Aprobata rodziców", fill = "% w grupie") +
+  labs(x = "Liczba drinków", y = "Aprobata rodziców", fill = "% w grupie") +
   theme_minimal()
 ```
+
+Na powyższej heatmapie przedstawiono zależność między aprobatą rodziców a liczbą spożywanych drinków, wyrażoną w procentach w obrębie każdej grupy.
+
+### Interpretacja wyników i wnioski
+* Osoby z aprobatą rodziców **częściej** deklarują **spożycie alkoholu**. Największy udział występuje w grupie spożywającej 5-8 drinków podczas wyjścia, a sam rokład jest widocznie przesunięty w stronę większej konsumpcji alkoholu.
+* Osoby bez aprobaty rodziców **rzadziej** deklarują **wysokie spożycie alkoholu**. Największy udział występuje w grupie spożywającej 1-3 drinków podczas wyjścia, a rozkład jest bardziej skoncentrowany na niskim oraz umiarkowanym spożyciu.
+* **Brak aprobaty rodziców** wiąże się z większym odstekiem **abstynentów**. W grupie z aprobatą 5,2% badanych studentów deklaruje się jako osoby niepijące, natomiast w grupie bez aprobaty jest to aż 14,6%.
+
+> **Wniosek**: Analiza wskazuje na wyraźne zróżnicowanie wzorców spożycia alkoholu w zależności od postawy rodziców wobec picia. Studenci, których rodzice aprobują spożywanie alkoholu, częściej deklarują wyższe poziomy konsumpcji (5–8 oraz 8+ drinków), podczas gdy wśród osób bez takiej aprobaty dominują zachowania umiarkowane (1–3 drinki) lub całkowita abstynencja. Wyniki sugerują, że postawy rodzicielskie **mogą odgrywać istotną rolę** w kształtowaniu nawyków związanych ze spożyciem alkoholu wśród młodych dorosłych.
 
 ```{r test chi kwadrat, echo=FALSE}
 tidy(chi_test) %>%
@@ -1397,6 +1429,9 @@ tidy(chi_test) %>%
   column_spec(1, bold = TRUE)
 ```
 
+W celu potwierdzenia wniosków sformuowanych na podstawie heatmapy przeprowadzono test Chi-kwadrat. Test niezależności wykazał istnienie statystycznie istotnej zależności pomiędzy aprobatą rodziców wobec spożycia alkoholu a liczbą spożywanych drinków przez studentów (χ²(4) = 16,06; p = 0,003). Oznacza to, że rozkład spożycia alkoholu istotnie różni się w zależności od postawy rodziców wobec picia.
+
+## Średnie spożycie alkoholu na wydziałach
 
 ```{r różnice między wydziałami, echo=FALSE}
 
@@ -1423,13 +1458,23 @@ dane_fac %>%
   geom_bar(stat = "identity") +
   coord_flip() +
   scale_fill_viridis_c(option = "mako", direction = -1) +
-  labs(title = "Średnie spożycie alkoholu na wydziałach",
-       subtitle = paste("Test Kruskala-Wallisa p-value:", round(kw_test$p.value, 4)),
+  labs(subtitle = paste("Test Kruskala-Wallisa p-value:", round(kw_test$p.value, 4)),
        x = "", y = "Średnia liczba drinków (indeks)") +
   theme_minimal() +
   theme(legend.position = "none")
 
 ```
+
+Wykres przedstawia średnie spożycie alkoholu (liczbę drinków) w zależności od wydziału.
+
+### Interpretacja wyników i wnioski
+* Najwyższe średnie spożycie alkoholu występuje na wydziałach **AgriSciences**, **prawa** oraz **zarządzania i ekonomii**.
+* Najniższe średnie spożycie alkoholu obserwowane jest natomiast na wydziałach **edukacji**, **medycyny** i **nauk ścisłych**.
+* Różnice między wydziałami są widoczne wizualnie (ok. 4-6,5 w skali indeksu), jednak nie są one bardzo duże. Przeprowadzony **test Kruskala-Wallisa** wykazał wartość p-value = 0,1213 < 0,05, która świadczy o **braku istotnych statystycznie różnic** w poziomie spożycia alkoholu pomiędzy wydziałami. Oznacza to, że zaobserwowane różnice w średnich wartościach mogą wynikać z losowych wahań w próbie, a nie z rzeczywistych różnic między populacjami studentów poszczególnych wydziałów.
+
+>**Wniosek**: Choć studenci niektórych wydziałów (np. AgriSciences i Law) deklarują wyższe średnie spożycie alkoholu niż studenci wydziałów takich jak Science czy Medicine and Health Services, różnice te **nie są istotne statystycznie**. Test Kruskala–Wallisa nie potwierdził istnienia istotnych różnic w poziomie spożycia alkoholu pomiędzy wydziałami.
+
+## Porównanie GPA względem czasu poświęconego na naukę
 
 ```{r porównanie czy warto sie uczyc, echo=FALSE}
 # 1. Przygotowanie danych i podział na grupy
@@ -1451,8 +1496,7 @@ ggbetweenstats(
   y     = GPA,
   type  = "robust", # Statystyka odporna na nierówne grupy i outliers
   tr    = 0.1,      # Średnia ucinana (10%)
-  title = "Porównanie GPA względem czasu poświęconego na naukę",
-  subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
+subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
   xlab  = "Intensywność nauki własnej",
   ylab  = "Średnia ocen (GPA %)",
   palette = "Set2", 
@@ -1461,6 +1505,17 @@ ggbetweenstats(
 )
 
 ```
+
+Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 124), natomiat grupa 2: powyżej 5 godzin tygodniowo (n = 192).
+
+### Interpretacje wyników i wnioski
+* **Średnie (trimmed mean) GPA** w obu grupach są niemal identyczne (grupa 1: 68,02; grupa 2: 67,90).
+* **Rozkłady wyników GPA** w obu grupach są bardzo podobne; zbliżone mediany, podobny zakres wartości oraz nie wykazują wyraźnego przesunięcia jednej grupy względem drugiej.
+* Przeprowadzony **test t Yuen'a** (odporny na obserwacje odstające) zwrócił wartość p-value = 0,92 < 0,05, zatem nie stwierdzono istotnej statystycznie różnicy w GPA pomiędzy studentami uczącymi się do 5 godzin tygodniowo a tymi, którzy uczą się więcej. Przedział ufności obejmuje 0, co dodatkowo potwierdza brak istotnego efektu.
+
+>**Wniosek**: Czas poświęcony na naukę własną (powyżej lub poniżej 5 godzin tygodniowo) **nie różnicuje istotnie** wyników GPA. Studenci uczący się więcej niż 5 godzin tygodniowo nie osiągają statystycznie istotnie wyższych wyników niż studenci uczący się krócej.
+
+## Wpływ intensywności nauki i imprezowania na średnią ocen (GPA)
 
 ```{r czy nauka osłabia negatywny wpływ imprezowania, echo=FALSE}
 # 1. Przygotowanie danych
@@ -1490,7 +1545,6 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
   geom_point(size = 4) +
   scale_color_manual(values = c("Mało nauki (<5h)" = "#e74c3c", "Dużo nauki (>5h)" = "#2ecc71")) +
   labs(
-    title = "Wykres interakcji: Nauka vs Imprezy",
     x = "Intensywność imprezowania",
     y = "Średnia ocen (GPA %)",
     color = "Poziom nauki:"
@@ -1499,6 +1553,15 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
   theme(legend.position = "bottom")
 ```
 
+Wykres przedstawia interakcję między intensywnością nauki a częstotliwością imprezowania w odniesieniu do średniego GPA. Zastosowana częstotliwość imprezowania kształtuje się następująco (w ujęciu tygodniowym): 0 imprez = Nigdy, 1 impreza lub wyłącznie w weekendy = Rzadko, 2+ imprez = Często.
+
+### Interpretacja wyników i wnioski
+* Przy **braku imprezowania** intensywność nauki wyraźnie różnicuje wyniki. Między grupą uczącą się poniżej 5 godzin tygodniowo a tą powyżej 5 godzin występuje przewaga GPA rzędu 7 p.p. na korzyść tych uczących się więcej.
+* Przy **rzadkim oraz częstym imprezowaniu** obie grupy wskazują na niemal identyczne GPA, a linie je reprezentujące niemalże się pokrywają.
+
+>**Wniosek**: Wyniki sugerują, że relacja między nauką a osiągnięciami akademickimi jest modyfikowana przez częstotliwość imprezowania. Najwyższe GPA obserwuje się u studentów, którzy intensywnie się uczą i nie imprezują, natomiast przy częstym lub sporadycznym imprezowaniu wpływ intensywności nauki na GPA staje się słabszy.
+
+## Szacowany wpływ czasu nauki i wydziału na wynik GPA
 
 ```{r wykres manova ancova anova (do obczajenia), echo=FALSE}
 # 1. Przygotowanie danych (bez zmian)
@@ -1572,6 +1635,16 @@ plot_model(model_ancova,
   )
 ```
 
+Wykres przedstawia wyniki modelu regresji ilustrującego wpływ liczby godzin nauki oraz przynależności do wydziału na poziom GPA wraz z 95% przedziałami ufności.
+
+### Interpretacja wyników i wnioski
+* Zmienna liczba godzin nauki (study num) **nie wykazuje istotnego wpływu** na wynik GPA; oszacowany współczynnik jest bliski zeru, a przedział ufności obejmuje wartość 0, co wskazuje na brak statystycznie istotnej zależności między czasem nauki a osiągnięciami akademickimi.
+* Przynależność do wydziału **różnicuje poziom GPA**: Studenci wydziałów Medicine and Health Services, Engineering oraz Education osiągają przeciętnie wyższe wyniki GPA w porównaniu z grupą referencyjną, natomiast studenci wydziałów AgriSciences, Economic & Management Sciences oraz Law uzyskują przeciętnie niższe wartości GPA.
+* Najsilniejszy ujemny efekt obserwuje się dla wydziału **AgriSciences**, natomiast najwyższy dodatni efekt dla kierunków związanych z **medycyną i ochroną zdrowia**.
+* Szerokość przedziałów ufności dla części wydziałów wskazuje na większą niepewność estymacji, co sugeruje ostrożność w interpretacji siły poszczególnych efektów.
+
+>**Wniosek**: Wyniki modelu regresji wskazują, że przynależność do wydziału ma istotniejsze znaczenie dla poziomu GPA niż sama liczba godzin poświęcanych na naukę. Najwyższe wartości GPA obserwuje się wśród studentów kierunków medycznych i inżynierskich, natomiast najniższe wśród studentów nauk rolniczych oraz ekonomiczno-zarządczych. Czas nauki, analizowany samodzielnie, nie stanowi istotnego predyktora wyników akademickich.
+
 ```{r tabela ancova, echo=FALSE}
 # Generowanie tabeli
 tabela_dane %>%
@@ -1579,10 +1652,10 @@ tabela_dane %>%
     format = "html", 
     escape = FALSE, # Ważne dla kolorowania
     align = "c",
-    caption = "Tabela 1: Wyniki analizy kowariancji (ANCOVA)"
+    caption = "Wyniki analizy kowariancji (ANCOVA)"
   ) %>%
   kable_classic(full_width = F, html_font = "Cambria") %>%
   row_spec(0, bold = TRUE, background = "#f2f2f2") 
 ```
 
-
+Powyższa analiza została dodatkowo poparta **analizą kowariancji (ANCOVA)**, w której zbadano wpływ liczby godzin nauki (study_num) oraz wydziału (faculty) na poziom GPA, przy jednoczesnym uwzględnieniu ob czynników w jednym modelu. Analiza ta **nie potwierdziła istotnego wpływu** czasu nauki ani wydziału na poziom GPA, co sugeruje, że obserwowane wcześniej różnice mają charakter opisowy i nie znajdują potwierdzenia statystycznego w modelu.
