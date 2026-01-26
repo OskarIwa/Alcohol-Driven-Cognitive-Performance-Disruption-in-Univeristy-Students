@@ -919,7 +919,7 @@ Krzywe widoczne nad wykresami mają bardzo zbliżony kształt dla obu grup. Wska
 **3. Zróżnicowanie i rozpiętość wyników**
 Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zróżnicowane postawy. Zarówno wśród kobiet, jak i mężczyzn znajdziemy osoby z wynikami bardzo wysokimi, jak i pojedyncze przypadki wyników skrajnie niskich (poniżej 40%). Zakres zmienności jest porównywalny, co potwierdza, że poziom zróżnicowania wiedzy jest niezależny od płci.
 
-**Pdsumowanie:**
+**Podsumowanie:**
 Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
 ## Profil studenta w kontekście statusu stypendialnego
@@ -1220,115 +1220,6 @@ Analiza wykazała istotną statystycznie ($p < 0.001$), lecz bardzo słabą ujem
 3. **Mechanizmy kompensacyjne**: Tak słaby związek sugeruje, że studenci skutecznie oddzielają życie towarzyskie od nauki. Ewentualny negatywny wpływ alkoholu jest prawdopodobnie niwelowany przez inne czynniki (np. nadrabianie zaległości w dni bez imprez) lub ujawnia się dopiero przy skrajnym spożyciu, które w tej próbie stanowi mniejszość.
 
 > **Podsumowanie**: Hipoteza o negatywnym wpływie alkoholu na oceny została potwierdzona statystycznie, jednak siła tego oddziaływania jest marginalna. Samo spożycie alkoholu nie jest głównym wyznacznikiem sukcesu akademickiego – kluczowe wydają się inne czynniki
-
-# Uporządkowany model logitowy 
-```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
-dane_ordinal <- dane %>%
-  mutate(
-    fail_level = case_when(
-      modules_failed == "0" ~ "Brak",
-      modules_failed == "1" ~ "1 oblany",
-      modules_failed == "2" ~ "2 oblane",
-      modules_failed %in% c("3", "4+") ~ "3+ oblane"
-    ),
-    fail_level = factor(fail_level, 
-                        levels = c("Brak", "1 oblany", "2 oblane", "3+ oblane"), 
-                        ordered = TRUE),
-    party_num = case_when(
-      partying == "0" ~ 0,
-      partying == "1" ~ 1,
-      partying == "Only weekends" ~ 1.5,
-      partying %in% c("2", "3", "4+") ~ 3,
-      TRUE ~ NA_real_
-    ),
-    missed_num = case_when(
-      classes_missed == "0" ~ 0,
-      classes_missed == "1" ~ 1,
-      classes_missed == "2" ~ 2,
-      classes_missed %in% c("3", "4+") ~ 3,
-      TRUE ~ NA_real_
-    )
-  ) %>%
-  filter(!is.na(fail_level), !is.na(party_num), !is.na(missed_num))
-
-model_ord_simple <- polr(fail_level ~ party_num + missed_num, 
-                         data = dane_ordinal, 
-                         Hess = TRUE)
-
-wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TRUE) %>%
-  filter(coef.type == "coefficient") %>%
-  mutate(
-    p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE),
-    term = case_when(
-      term == "party_num" ~ "Częstotliwość imprezowania",
-      term == "missed_num" ~ "Opuszczanie zajęć",
-      TRUE ~ term
-    ),
-    label_text = paste0("OR: ", round(estimate, 2))
-  )
-
-ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
-  geom_hline(yintercept = 1, linetype = "dashed", color = "grey60", size = 0.8) +
-  geom_segment(aes(x = term, xend = term, y = 1, yend = estimate), 
-               color = ifelse(wyniki_statystyczne$p.value < 0.05, "#2980b9", "grey80"), 
-               size = 1.2) +
-  geom_point(aes(color = p.value < 0.05), size = 5) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), 
-                width = 0.1, color = "grey40", alpha = 0.6) +
-  geom_text(aes(label = label_text), hjust = -0.4, vjust = -0.5, size = 3.5, fontface = "bold", color = "#34495e") +
-  coord_flip() +
-  scale_color_manual(values = c("TRUE" = "#2980b9", "FALSE" = "grey80")) +
-  labs(
-    title = "Co zwiększa liczbę oblanych przedmiotów:",
-    x = "",
-    y = "Iloraz Szans"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(
-    legend.position = "none",
-    panel.grid.major.y = element_blank(),
-    plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
-    axis.text.y = element_text(face = "bold", size = 11)
-  )
-
-wyniki_statystyczne %>%
-  mutate(
-    p_val_num = scales::pvalue(p.value, accuracy = 0.001),
-    estimate = round(estimate, 2),
-    conf.low = round(conf.low, 2),
-    conf.high = round(conf.high, 2)
-  ) %>%
-  dplyr::select(
-    `Czynnik` = term,
-    `OR` = estimate,
-    `Dolna gr.` = conf.low,
-    `Górna gr.` = conf.high,
-    `p-value` = p_val_num
-  ) %>%
-  kable(
-    format = "html", 
-    align = "lcccc",
-    caption = "Wyniki porządkowego modelu logitowego"
-  ) %>%
-  kable_material(c("striped", "hover"), full_width = F, html_font = "Roboto") %>%
-  column_spec(2, bold = TRUE, background = "#eaf2f8", color = "#2874a6", border_right = TRUE) %>%
-  column_spec(5, color = "grey40", italic = TRUE) %>%
-  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
-  
-```
-
-## Metodologia
-Zastosowana metoda: **Regresja Logistyczna dla Zmiennych Porządkowych**.
-
-W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zostosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
-
-## Interpretacje i wnioski
-**Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
-
-**Częstotliwość imprezowania**: Wynik ten jest wysoce istotny i wskazuje na silną, odwrotną zależność. Wartość OR poniżej 1.0 oznacza, że wyższa aktywność towarzyska (przy stałym poziomie nieobecności) wiąże się ze spadkiem ryzyka porażki. Konkretnie, wyższy poziom aktywności towarzyskiej obniża szansę na niepowodzenie o około 31%.
-
->**Wniosek**: Wynik ten sugeruje, że życie towarzyskie może pełnić funkcję "bufora stresu" lub sprzyjać budowaniu kapitału społecznego (wspólna nauka, wymiana notatek). Studenci aktywni towarzysko radzą sobie lepiej niż osoby izolujące się, pod warunkiem, że imprezowanie nie prowadzi do opuszczania zajęć.
-
 
 # Wnioskowanie statystyczne
 
@@ -1659,3 +1550,112 @@ tabela_dane %>%
 ```
 
 Powyższa analiza została dodatkowo poparta **analizą kowariancji (ANCOVA)**, w której zbadano wpływ liczby godzin nauki (study_num) oraz wydziału (faculty) na poziom GPA, przy jednoczesnym uwzględnieniu ob czynników w jednym modelu. Analiza ta **nie potwierdziła istotnego wpływu** czasu nauki ani wydziału na poziom GPA, co sugeruje, że obserwowane wcześniej różnice mają charakter opisowy i nie znajdują potwierdzenia statystycznego w modelu.
+
+# Uporządkowany model logitowy
+
+```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
+dane_ordinal <- dane %>%
+  mutate(
+    fail_level = case_when(
+      modules_failed == "0" ~ "Brak",
+      modules_failed == "1" ~ "1 oblany",
+      modules_failed == "2" ~ "2 oblane",
+      modules_failed %in% c("3", "4+") ~ "3+ oblane"
+    ),
+    fail_level = factor(fail_level, 
+                        levels = c("Brak", "1 oblany", "2 oblane", "3+ oblane"), 
+                        ordered = TRUE),
+    party_num = case_when(
+      partying == "0" ~ 0,
+      partying == "1" ~ 1,
+      partying == "Only weekends" ~ 1.5,
+      partying %in% c("2", "3", "4+") ~ 3,
+      TRUE ~ NA_real_
+    ),
+    missed_num = case_when(
+      classes_missed == "0" ~ 0,
+      classes_missed == "1" ~ 1,
+      classes_missed == "2" ~ 2,
+      classes_missed %in% c("3", "4+") ~ 3,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(fail_level), !is.na(party_num), !is.na(missed_num))
+
+model_ord_simple <- polr(fail_level ~ party_num + missed_num, 
+                         data = dane_ordinal, 
+                         Hess = TRUE)
+
+wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TRUE) %>%
+  filter(coef.type == "coefficient") %>%
+  mutate(
+    p.value = 2 * pnorm(abs(statistic), lower.tail = FALSE),
+    term = case_when(
+      term == "party_num" ~ "Częstotliwość imprezowania",
+      term == "missed_num" ~ "Opuszczanie zajęć",
+      TRUE ~ term
+    ),
+    label_text = paste0("OR: ", round(estimate, 2))
+  )
+
+ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey60", size = 0.8) +
+  geom_segment(aes(x = term, xend = term, y = 1, yend = estimate), 
+               color = ifelse(wyniki_statystyczne$p.value < 0.05, "#2980b9", "grey80"), 
+               size = 1.2) +
+  geom_point(aes(color = p.value < 0.05), size = 5) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), 
+                width = 0.1, color = "grey40", alpha = 0.6) +
+  geom_text(aes(label = label_text), hjust = -0.4, vjust = -0.5, size = 3.5, fontface = "bold", color = "#34495e") +
+  coord_flip() +
+  scale_color_manual(values = c("TRUE" = "#2980b9", "FALSE" = "grey80")) +
+  labs(
+    title = "Co zwiększa liczbę oblanych przedmiotów:",
+    x = "",
+    y = "Iloraz Szans"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "none",
+    panel.grid.major.y = element_blank(),
+    plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
+    axis.text.y = element_text(face = "bold", size = 11)
+  )
+
+wyniki_statystyczne %>%
+  mutate(
+    p_val_num = scales::pvalue(p.value, accuracy = 0.001),
+    estimate = round(estimate, 2),
+    conf.low = round(conf.low, 2),
+    conf.high = round(conf.high, 2)
+  ) %>%
+  dplyr::select(
+    `Czynnik` = term,
+    `OR` = estimate,
+    `Dolna gr.` = conf.low,
+    `Górna gr.` = conf.high,
+    `p-value` = p_val_num
+  ) %>%
+  kable(
+    format = "html", 
+    align = "lcccc",
+    caption = "Wyniki porządkowego modelu logitowego"
+  ) %>%
+  kable_material(c("striped", "hover"), full_width = F, html_font = "Roboto") %>%
+  column_spec(2, bold = TRUE, background = "#eaf2f8", color = "#2874a6", border_right = TRUE) %>%
+  column_spec(5, color = "grey40", italic = TRUE) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
+  
+```
+
+## Metodologia
+Zastosowana metoda: **Regresja Logistyczna dla Zmiennych Porządkowych**.
+
+W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zostosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
+
+## Interpretacje i wnioski
+**Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
+
+**Częstotliwość imprezowania**: Wynik ten jest wysoce istotny i wskazuje na silną, odwrotną zależność. Wartość OR poniżej 1.0 oznacza, że wyższa aktywność towarzyska (przy stałym poziomie nieobecności) wiąże się ze spadkiem ryzyka porażki. Konkretnie, wyższy poziom aktywności towarzyskiej obniża szansę na niepowodzenie o około 31%.
+
+>**Wniosek**: Wynik ten sugeruje, że życie towarzyskie może pełnić funkcję "bufora stresu" lub sprzyjać budowaniu kapitału społecznego (wspólna nauka, wymiana notatek). Studenci aktywni towarzysko radzą sobie lepiej niż osoby izolujące się, pod warunkiem, że imprezowanie nie prowadzi do opuszczania zajęć.
