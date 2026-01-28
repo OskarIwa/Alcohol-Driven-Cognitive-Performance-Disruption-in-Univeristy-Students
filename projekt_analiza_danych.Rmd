@@ -2,12 +2,16 @@
 title: "Alcohol Driven Cognitive Performance Disruption in University Students"
 author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
 date: "`r Sys.Date()`"
-output: 
+output:
   html_document:
     theme:
-      bootswatch: cosmo  
+      bootswatch: cosmo
     toc: true
-    toc_float: true      
+    toc_float: true
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
 ---
 
 ```{r pakiety, include=FALSE}
@@ -1659,3 +1663,19 @@ W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, z
 **Częstotliwość imprezowania**: Wynik ten jest wysoce istotny i wskazuje na silną, odwrotną zależność. Wartość OR poniżej 1.0 oznacza, że wyższa aktywność towarzyska (przy stałym poziomie nieobecności) wiąże się ze spadkiem ryzyka porażki. Konkretnie, wyższy poziom aktywności towarzyskiej obniża szansę na niepowodzenie o około 31%.
 
 >**Wniosek**: Wynik ten sugeruje, że życie towarzyskie może pełnić funkcję "bufora stresu" lub sprzyjać budowaniu kapitału społecznego (wspólna nauka, wymiana notatek). Studenci aktywni towarzysko radzą sobie lepiej niż osoby izolujące się, pod warunkiem, że imprezowanie nie prowadzi do opuszczania zajęć.
+
+# Podsumowanie
+
+Analiza została oparta na szerokim sondażu studenckim obejmującym dane demograficzne, ekonomiczne i behawioralne oraz informacje o GPA i spożyciu alkoholu. Dane zostały wcześniej uporządkowane: usunięto obserwacje bez kluczowych zmiennych (płeć, wydział, rok studiów), sprawdzono wartości skrajne oraz uzupełniono braki metodą k-Nearest Neighbors (k = 5), z dodatkowymi korektami dla wybranych grup, np. studentów pierwszego roku. Jakość imputacji była kontrolowana wizualnie i statystycznie, aby ograniczyć ryzyko zniekształceń wyników.
+
+Wyniki opisowe pokazały silne zróżnicowanie wzorców picia. Około połowa badanych deklarowała intensywne spożycie alkoholu w kategoriach „5–8” i „8+”, natomiast abstynenci stanowili jedynie około 7% próby. Rozkład GPA był zbliżony do normalnego (średnia ok. 68,4%, mediana ok. 68%, odchylenie standardowe ok. 9,98), co pozwalało traktować tę zmienną jako stabilny punkt odniesienia w dalszych analizach.
+
+Zależność między ilością spożywanego alkoholu a wynikami akademickimi okazała się statystycznie istotna, ale bardzo słaba. Współczynnik Spearmana wyniósł ρ = −0,086 (p < 0,001), co oznacza, że alkohol wyjaśnia mniej niż 1% zmienności GPA. Wynik ten sugeruje, że samo picie nie jest głównym czynnikiem decydującym o sukcesie akademickim, a jego negatywne skutki ujawniają się głównie w przypadkach skrajnych lub są częściowo równoważone przez inne zachowania, takie jak intensywniejsza nauka w tygodniach bez imprez.
+
+Istotną rolę odegrały czynniki kontekstowe. Studenci o wyższym budżecie częściej prowadzili intensywne życie towarzyskie i częściej znajdowali się w grupach o wysokiej konsumpcji alkoholu, co pośrednio zwiększało ryzyko gorszych wyników. Miejsce zamieszkania również miało znaczenie: w akademikach przy bardzo wysokim spożyciu odsetek osób opuszczających co najmniej dwa zajęcia sięgał około 70%, podczas gdy w mieszkaniach prywatnych wynosił około 47%. Model logitowy potwierdził, że zarówno intensywność picia, jak i środowisko mieszkaniowe istotnie zwiększają prawdopodobieństwo absencji na zajęciach, nawet po uwzględnieniu innych zmiennych kontrolnych.
+
+Analiza mechanizmu kompensacji pokazała, że większy nakład pracy własnej wiąże się z wyższym GPA, jednak tylko do pewnego poziomu. Dodatkowe godziny nauki mogą częściowo neutralizować skutki umiarkowanego imprezowania, ale przy bardzo intensywnym stylu życia efekt ten słabnie. Płeć nie okazała się istotnym moderatorem zależności między alkoholem a wynikami, natomiast znaczenie miały czynniki psychospołeczne. Aprobata rodziców wobec picia była istotnie związana z wyższą konsumpcją (χ² = 16,06; p = 0,003). Studenci pobierający stypendium deklarowali większą dyscyplinę w nauce i częstsze ograniczanie rozrywki do weekendów, co sprzyjało stabilniejszym wynikom.
+
+Badanie ma swoje ograniczenia. Dane są samoopisowe i obserwacyjne, dlatego nie pozwalają jednoznacznie rozstrzygać o przyczynach i skutkach. Mimo starannej imputacji pozostaje pewien poziom niepewności, a część potencjalnych czynników zakłócających, takich jak stres czy jakość snu, nie została w pełni uwzględniona. Z praktycznego punktu widzenia wyniki sugerują jednak, że uczelnie powinny traktować problem spożycia alkoholu nie tylko jako kwestię zdrowia, ale także jako element wpływający pośrednio na funkcjonowanie akademickie. Najbardziej sensowne wydają się działania kierowane do konkretnych grup ryzyka, zwłaszcza mieszkańców akademików oraz studentów o wysokim budżecie. Całość pokazuje, że wpływ alkoholu na GPA jest niewielki, ale jego znaczenie rośnie w określonych kontekstach społecznych i przy bardzo intensywnych wzorcach konsumpcji.
+
+
