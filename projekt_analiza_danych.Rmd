@@ -194,7 +194,7 @@ gg_miss_var(dane, show_pct = TRUE) +
   theme_minimal()
 ```
 
-Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar` i `ggmice`. Pozwoliło to na podjęcie kluczowych decyzji:
+Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar`. Pozwoliło to na podjęcie kluczowych decyzji:
 
 1. **Eliminacja rekordów:** Usunięto obserwacje posiadające braki w kluczowych zmiennych strukturalnych: `sex` (płeć), `faculty` (wydział) oraz `last_year` (rok studiów). Zmienne te definiują profil studenta i są trudne do wiarygodnego odtworzenia metodami statystycznymi.
 2. **Identyfikacja mechanizmu braków:** Potwierdzono, że część braków ma charakter strukturalny (np. brak ocen z poprzedniego roku dla studentów pierwszego roku), co wyklucza prostą imputację średnią dla całej populacji.
@@ -291,7 +291,7 @@ dane_analiza <- dane %>%
     ),
     study_num_score = case_when(
       studying == "0" ~ 0,
-      studying == "1-2" ~ 1.5, 
+      studying == "1-3" ~ 1.5, 
       studying == "3-5" ~ 4,
       studying == "5-8" ~ 6.5,
       studying == "8+" ~ 10,
@@ -923,18 +923,18 @@ Profil stypendysty wyłaniający się z danych to profil studenta o wysokiej dys
 ## Typologia zachowań związanych ze spożyciem alkoholu
 Analiza struktury spożycia ujawnia dominujący "styl picia" w badanej grupie. Ilustracja obrazuje deklarowaną liczbę drinków spożywanych **podczas pojedynczego wyjścia towarzyskiego**. $N = 398$
 
-```{r spożycie alkoholu ilustracja, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=10, fig.align='center'}
+```{r spożycie alkoholu ilustracja, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, out.width="100%"}
 dane_piktogram <- dane %>%
   filter(!is.na(drinks)) %>%
   count(drinks) %>%
   mutate(pct = n / sum(n),
          tekst_gora = case_when(
-           drinks == "0"   ~ "Abstynencja ",
+           drinks == "0"    ~ "Abstynencja ",
            drinks == "1-3" ~ "Symboliczne 1-3",
            drinks == "3-5" ~ "Umiarkowane 3-5",
            drinks == "5-8" ~ "Wysokie 5-8",
            drinks == "8+"  ~ "Ryzykowne 8+",
-           TRUE            ~ drinks
+           TRUE             ~ drinks
          ),
          tekst_dol = paste0("Liczebność: ", n, "\nUdział: ", scales::percent(pct, accuracy = 1))) %>%
   arrange(match(drinks, c("0", "1-3", "3-5", "5-8", "8+")))
@@ -958,8 +958,8 @@ for (i in 1:5) {
     xref = "paper", yref = "paper",
     x = x_pos, 
     y = 0.5,        
-    sizex = 0.16,
-    sizey = 0.60,   
+    sizex = 0.16,  
+    sizey = 0.60,  
     xanchor = "center", yanchor = "middle",
     layer = "below"
   )
@@ -1001,8 +1001,8 @@ plot_ly() %>%
     title = list(text = "Wzorce konsumpcji alkoholu", 
                  font = list(size = 25),
                  y = 0.98),
-    
-    margin = list(t = 40, b = 20, l = 10, r = 10)
+    margin = list(t = 40, b = 20, l = 0, r = 0),
+    autosize = TRUE
   ) %>%
   config(staticPlot = TRUE)
 ```
@@ -1148,9 +1148,9 @@ dane %>%
 Na powyższej heatmapie przedstawiono zależność między aprobatą rodziców a liczbą spożywanych drinków, wyrażoną w procentach w obrębie każdej grupy.
 
 ### Interpretacja wyników i wnioski
-* Osoby z aprobatą rodziców **częściej** deklarują **spożycie alkoholu**. Największy udział występuje w grupie spożywającej 5-8 drinków podczas wyjścia, a sam rokład jest widocznie przesunięty w stronę większej konsumpcji alkoholu.
+* Osoby z aprobatą rodziców **częściej** deklarują **spożycie alkoholu**. Największy udział występuje w grupie spożywającej 5-8 drinków podczas wyjścia, a sam rozkład jest widocznie przesunięty w stronę większej konsumpcji alkoholu.
 * Osoby bez aprobaty rodziców **rzadziej** deklarują **wysokie spożycie alkoholu**. Największy udział występuje w grupie spożywającej 1-3 drinków podczas wyjścia, a rozkład jest bardziej skoncentrowany na niskim oraz umiarkowanym spożyciu.
-* **Brak aprobaty rodziców** wiąże się z większym odstekiem **abstynentów**. W grupie z aprobatą 5,2% badanych studentów deklaruje się jako osoby niepijące, natomiast w grupie bez aprobaty jest to aż 14,6%.
+* **Brak aprobaty rodziców** wiąże się z większym odsetkiem **abstynentów**. W grupie z aprobatą 5,2% badanych studentów deklaruje się jako osoby niepijące, natomiast w grupie bez aprobaty jest to aż 14,6%.
 
 > **Wniosek**: Analiza wskazuje na wyraźne zróżnicowanie wzorców spożycia alkoholu w zależności od postawy rodziców wobec picia. Studenci, których rodzice aprobują spożywanie alkoholu, częściej deklarują wyższe poziomy konsumpcji (5–8 oraz 8+ drinków), podczas gdy wśród osób bez takiej aprobaty dominują zachowania umiarkowane (1–3 drinki) lub całkowita abstynencja. Wyniki sugerują, że postawy rodzicielskie **mogą odgrywać istotną rolę** w kształtowaniu nawyków związanych ze spożyciem alkoholu wśród młodych dorosłych.
 
@@ -1216,11 +1216,11 @@ dane_fac %>%
 Wykres przedstawia średnie spożycie alkoholu (liczbę drinków) w zależności od wydziału.
 
 ### Interpretacja wyników i wnioski
-* Najwyższe średnie spożycie alkoholu występuje na wydziałach **AgriSciences**, **prawa** oraz **zarządzania i ekonomii**.
+* Najwyższe średnie spożycie alkoholu występuje na wydziałach **nauk rolniczych**, **prawa** oraz **zarządzania i ekonomii**.
 * Najniższe średnie spożycie alkoholu obserwowane jest natomiast na wydziałach **edukacji**, **medycyny** i **nauk ścisłych**.
-* Różnice między wydziałami są widoczne wizualnie (ok. 4-6,5 w skali indeksu), jednak nie są one bardzo duże. Przeprowadzony **test Kruskala-Wallisa** wykazał wartość p-value = 0,1213 < 0,05, która świadczy o **braku istotnych statystycznie różnic** w poziomie spożycia alkoholu pomiędzy wydziałami. Oznacza to, że zaobserwowane różnice w średnich wartościach mogą wynikać z losowych wahań w próbie, a nie z rzeczywistych różnic między populacjami studentów poszczególnych wydziałów.
+* Różnice między wydziałami są widoczne wizualnie (ok. 4-6,5 w skali indeksu), jednak nie są one bardzo duże. Przeprowadzony **test Kruskala-Wallisa** wykazał wartość p-value = 0,1213 > 0,05, która świadczy o **braku istotnych statystycznie różnic** w poziomie spożycia alkoholu pomiędzy wydziałami. Oznacza to, że zaobserwowane różnice w średnich wartościach mogą wynikać z losowych wahań w próbie, a nie z rzeczywistych różnic między populacjami studentów poszczególnych wydziałów.
 
->**Wniosek**: Choć studenci niektórych wydziałów (np. AgriSciences i Law) deklarują wyższe średnie spożycie alkoholu niż studenci wydziałów takich jak Science czy Medicine and Health Services, różnice te **nie są istotne statystycznie**. Test Kruskala–Wallisa nie potwierdził istnienia istotnych różnic w poziomie spożycia alkoholu pomiędzy wydziałami.
+>**Wniosek**: Choć studenci niektórych wydziałów (np. nauk rolniczych i prawa) deklarują wyższe średnie spożycie alkoholu niż studenci wydziałów takich jak nauki ścisłe czy medycyna, różnice te **nie są istotne statystycznie**. Test Kruskala–Wallisa nie potwierdził istnienia istotnych różnic w poziomie spożycia alkoholu pomiędzy wydziałami.
 
 ## Porównanie GPA względem czasu poświęconego na naukę
 
@@ -1229,7 +1229,7 @@ dane_nauka <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(studying), !is.na(GPA)) %>%
   mutate(study_group = case_when(
-    studying %in% c("0", "1-2", "3-5") ~ "Do 5h / tydz.",
+    studying %in% c("0", "1-3", "3-5") ~ "Do 5h / tydz.",
     studying %in% c("5-8", "8+") ~ "Powyżej 5h / tydz.",
     TRUE ~ NA_character_
   )) %>%
@@ -1249,12 +1249,12 @@ subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
   messages = FALSE)
 ```
 
-Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 124), natomiat grupa 2: powyżej 5 godzin tygodniowo (n = 192).
+Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 206), natomiat grupa 2: powyżej 5 godzin tygodniowo (n = 192).
 
 ### Interpretacje wyników i wnioski
-* **Średnie (trimmed mean) GPA** w obu grupach są niemal identyczne (grupa 1: 68,02; grupa 2: 67,90).
+* **Średnie (trimmed mean) GPA** w obu grupach są niemal identyczne (grupa 1: 68,42; grupa 2: 67,90).
 * **Rozkłady wyników GPA** w obu grupach są bardzo podobne; zbliżone mediany, podobny zakres wartości oraz nie wykazują wyraźnego przesunięcia jednej grupy względem drugiej.
-* Przeprowadzony **test t Yuen'a** (odporny na obserwacje odstające) zwrócił wartość p-value = 0,92 < 0,05, zatem nie stwierdzono istotnej statystycznie różnicy w GPA pomiędzy studentami uczącymi się do 5 godzin tygodniowo a tymi, którzy uczą się więcej. Przedział ufności obejmuje 0, co dodatkowo potwierdza brak istotnego efektu.
+* Przeprowadzony **test t Yuen'a** (odporny na obserwacje odstające) zwrócił wartość p-value = 0,63 > 0,05, zatem nie stwierdzono istotnej statystycznie różnicy w GPA pomiędzy studentami uczącymi się do 5 godzin tygodniowo a tymi, którzy uczą się więcej. Przedział ufności obejmuje 0, co dodatkowo potwierdza brak istotnego efektu.
 
 >**Wniosek**: Czas poświęcony na naukę własną (powyżej lub poniżej 5 godzin tygodniowo) **nie różnicuje istotnie** wyników GPA. Studenci uczący się więcej niż 5 godzin tygodniowo nie osiągają statystycznie istotnie wyższych wyników niż studenci uczący się krócej.
 
@@ -1264,7 +1264,7 @@ Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu p
 dane_int <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(partying), !is.na(studying), !is.na(GPA)) %>%
-  mutate(study_level = ifelse(studying %in% c("0", "1-2", "3-5"), "Mało nauki (<5h)", "Dużo nauki (>5h)")) %>%
+  mutate(study_level = ifelse(studying %in% c("0", "1-3", "3-5"), "Mało nauki (<5h)", "Dużo nauki (>5h)")) %>%
   mutate(party_level = case_when(
     partying == "0" ~ "Nigdy",
     partying %in% c("1", "Only weekends") ~ "Rzadko",
@@ -1293,10 +1293,11 @@ ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_leve
 Wykres przedstawia interakcję między intensywnością nauki a częstotliwością imprezowania w odniesieniu do średniego GPA. Zastosowana częstotliwość imprezowania kształtuje się następująco (w ujęciu tygodniowym): 0 imprez = Nigdy, 1 impreza lub wyłącznie w weekendy = Rzadko, 2+ imprez = Często.
 
 ### Interpretacja wyników i wnioski
-* Przy **braku imprezowania** intensywność nauki wyraźnie różnicuje wyniki. Między grupą uczącą się poniżej 5 godzin tygodniowo a tą powyżej 5 godzin występuje przewaga GPA rzędu 7 p.p. na korzyść tych uczących się więcej.
-* Przy **rzadkim oraz częstym imprezowaniu** obie grupy wskazują na niemal identyczne GPA, a linie je reprezentujące niemalże się pokrywają.
+* Przy **braku imprezowania** intensywność nauki wyraźnie różnicuje wyniki. Między grupą uczącą się poniżej 5 godzin tygodniowo a tą powyżej 5 godzin występuje przewaga GPA rzędu 10 p.p. na korzyść tych uczących się więcej.
+* W grupie **rzadko imprezującej** dochodzi do ciekawego odwrócenia – osoby uczące się mniej (linia czerwona) osiągają wyższe wyniki niż te uczące się dużo (linia zielona).
+* Przy *dużej częstotliwości imprez* sytuacja wraca do "normy", gdzie większy nakład nauki przekłada się na nieco wyższe oceny, choć różnica jest znacznie mniejsza niż w grupie nieimprezującej (2 p.p.).
 
->**Wniosek**: Wyniki sugerują, że relacja między nauką a osiągnięciami akademickimi jest modyfikowana przez częstotliwość imprezowania. Najwyższe GPA obserwuje się u studentów, którzy intensywnie się uczą i nie imprezują, natomiast przy częstym lub sporadycznym imprezowaniu wpływ intensywności nauki na GPA staje się słabszy.
+>**Wniosek**: Intensywne imprezowanie niweluje korzyści płynące z dużej ilości nauki. Najwyższe wyniki osiągają studenci, którzy dużo się uczą i całkowicie rezygnują z imprez. Co ciekawe, przy umiarkowanym (rzadkim) imprezowaniu, osoby poświęcające mniej czasu na naukę radzą sobie lepiej od tych, które uczą się dużo, co może sugerować występowanie innych czynników (np. efektywność nauki, balans życie-studia).
 
 ## Szacowany wpływ czasu nauki i wydziału na wynik GPA
 
@@ -1489,7 +1490,7 @@ wyniki_statystyczne %>%
 ## Metodologia
 Zastosowana metoda: **Regresja Logistyczna dla Zmiennych Porządkowych**.
 
-W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zostosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
+W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zastosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
 
 ## Interpretacje i wnioski
 **Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
