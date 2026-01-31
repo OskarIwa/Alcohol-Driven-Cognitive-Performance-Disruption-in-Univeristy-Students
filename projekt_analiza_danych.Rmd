@@ -404,6 +404,9 @@ set.seed(123)
 km <- kmeans(scale(dane_clust), centers = 3) 
 pca <- prcomp(scale(dane_clust))
 
+```
+
+```{r wykres archetypów, echo=FALSE}
 # 3. Przygotowanie danych do wykresu
 df_pca <- data.frame(pca$x[,1:2], cluster = factor(km$cluster)) %>%
   bind_cols(dane_clust) %>%
@@ -737,7 +740,7 @@ Analiza przestrzenna pozwala na sformułowanie następujących spostrzeżeń dot
 
 Analiza wpływu alkoholu na wyniki byłaby niepełna bez uwzględnienia czynników demograficznych. Poniższy wykres weryfikuje, czy płeć studenta różnicuje odporność na akademickie skutki życia towarzyskiego oraz czy dynamika spadku ocen jest uniwersalna dla obu grup.
 
-```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
+```{r przygotowanie pytanie 7, echo=FALSE, warning=FALSE}
 # 1. DANE
 dane_plot <- dane %>%
   filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex))
@@ -746,7 +749,9 @@ dane_plot <- dane %>%
 srednie_df <- dane_plot %>%
   group_by(sex, drinks) %>%
   summarise(srednia_ocena = mean(grade_last_y), .groups = "drop")
+```
 
+```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
 # 3. KOLORYSTYKA
 my_colors <- c("Kobieta" = "#FF2D55",  # Apple Pink / Coral
                "Mężczyzna" = "#007AFF") # Apple Blue
@@ -927,7 +932,7 @@ Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zr�
 Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
 ## Profil studenta w kontekście statusu stypendialnego
-```{r analiza stypendium, echo=FALSE, message=FALSE, warning=FALSE}
+```{r stypendium funkcje, echo=FALSE, message=FALSE, warning=FALSE}
 # 1. PRZYGOTOWANIE DANYCH
 dane_tabs <- dane %>%
   mutate(
@@ -938,6 +943,9 @@ dane_tabs <- dane %>%
   ) %>%
   dplyr::select(GPA, Stypendium, sex, studying, partying)
 
+```
+
+```{r stypendium obliczenia, echo=FALSE, message=FALSE, warning=FALSE}
 # 2. STATYSTYKI GPA
 stats_gpa <- dane_tabs %>%
   group_by(Stypendium) %>%
@@ -987,6 +995,9 @@ final_df <- rbind(
   create_row("  4+ razy", get_val(dane_tabs, "partying", "4+", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "pct"))
 )
 
+```
+
+```{r stypendium tabela, echo=FALSE, message=FALSE, warning=FALSE}
 # 5. BUDOWA I STYLIZACJA FLEZTABLE
 indeksy_sekcji <- which(final_df$N1 == "" & final_df$N2 == "")
 
@@ -1557,7 +1568,7 @@ Powyższa analiza została dodatkowo poparta **analizą kowariancji (ANCOVA)**, 
 
 # Uporządkowany model logitowy
 
-```{r model do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
+```{r model logitowy do pytania 6, echo=FALSE, message=FALSE, warning=FALSE}
 dane_ordinal <- dane %>%
   mutate(
     fail_level = case_when(
@@ -1601,7 +1612,9 @@ wyniki_statystyczne <- tidy(model_ord_simple, exponentiate = TRUE, conf.int = TR
     ),
     label_text = paste0("OR: ", round(estimate, 2))
   )
+```
 
+```{r model logitowy wykres, echo=FALSE, message=FALSE, warning=FALSE}
 ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "grey60", size = 0.8) +
   geom_segment(aes(x = term, xend = term, y = 1, yend = estimate), 
@@ -1625,7 +1638,9 @@ ggplot(wyniki_statystyczne, aes(x = reorder(term, estimate), y = estimate)) +
     plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
     axis.text.y = element_text(face = "bold", size = 11)
   )
+```
 
+```{r model logitowy tabela, echo=FALSE, message=FALSE, warning=FALSE}
 wyniki_statystyczne %>%
   mutate(
     p_val_num = scales::pvalue(p.value, accuracy = 0.001),
@@ -1649,7 +1664,6 @@ wyniki_statystyczne %>%
   column_spec(2, bold = TRUE, background = "#eaf2f8", color = "#2874a6", border_right = TRUE) %>%
   column_spec(5, color = "grey40", italic = TRUE) %>%
   row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
-  
 ```
 
 ## Metodologia
