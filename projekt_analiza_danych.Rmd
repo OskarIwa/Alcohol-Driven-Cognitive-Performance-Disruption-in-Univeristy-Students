@@ -15,32 +15,32 @@ output:
 ---
 
 ```{r pakiety, include=FALSE}
-library(naniar)
-library(dplyr)
-library(tidyverse)
-library(finalfit)
-library(mice)
-library(ggmice)
-library(VIM)
-library(ggplot2)
-library(kableExtra)
-library(knitr)
-library(validate)
-library(factoextra)
-library(plotly)
-library(shiny)
-library(prettydoc)
-library(flexdashboard)
-library(ggalluvial)
-library(ggdist)
-library(tidyquant)
-library(modelsummary)
-library(ggstatsplot)
-library(sjPlot)
-library(car)
-library(scales)
-library(flextable)
-library(MASS)
+wymagane_pakiety <- c(
+  "MASS",         
+  "car",
+  "validate",
+  "broom",        
+  "factoextra",
+  "tidyverse",    
+  "naniar",
+  "VIM",
+  "scales",
+  "ggdist",
+  "plotly",
+  "knitr",
+  "kableExtra",
+  "flextable",
+  "ggstatsplot",
+  "sjPlot",
+  "viridis"       
+)
+pakiety_do_instalacji <- wymagane_pakiety[!(wymagane_pakiety %in% installed.packages()[,"Package"])]
+
+if(length(pakiety_do_instalacji)) {
+  install.packages(pakiety_do_instalacji)
+}
+
+lapply(wymagane_pakiety, library, character.only = TRUE)    
 ```
 
 # Wprowadzenie
@@ -118,7 +118,6 @@ W tym etapie surowe dane ankietowe zostały poddane standaryzacji i transformacj
 * **Duplikaty:** Zidentyfikowano 2 duplikaty, jednak ze względu na specyfikę ankiety uznano je za możliwe zbiegi okoliczności (identyczne odpowiedzi różnych osób) i pozostawiono w zbiorze.
 
 ```{r diagnostyka, include=FALSE}
-#sprawdzenie sensu danych 
 rules <- validator(
   Oceny_12_klasa = (grade_12 >= 0 & grade_12 <= 100) | is.na(grade_12),
   Oceny_zeszly_rok = (grade_last_y >= 0 & grade_last_y <= 100) | is.na(grade_last_y),
@@ -127,11 +126,9 @@ rules <- validator(
 out <- confront(dane, rules)
 summary(out)
 
-#sprawdzenie NA w ostatniej zasadzie
 dane %>% 
   filter(is.na(last_year))
 
-#sprawdzenie duplikatów
 sum(duplicated(dane))
 dane %>%
   filter(duplicated(.))
@@ -140,16 +137,13 @@ dane %>%
 dane %>% 
   filter(grade_12 == 71 & is.na(grade_last_y))
 
-#usunięcie wierszy z brakami bez imputacji
 dane <- dane %>% filter(!is.na(sex))
 dane <- dane %>% filter(!is.na(faculty))
 dane <- dane %>% filter(!is.na(last_year))
-
 ```
 
 
 ```{r tabela-zmiennych, echo=FALSE}
-
 slownik <- data.frame(
   "Nazwa_Zmiennej" = c(
     "sex", "grade_12", "last_year", "faculty", "grade_last_y", 
@@ -177,15 +171,14 @@ slownik <- data.frame(
   )
 )
 
-# Generowanie tabeli
 kable(slownik, 
       col.names = c("Nazwa zmiennej", "Opis zmiennej"),
       caption = "Tabela 1: Słownik zmiennych") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
                 full_width = F, 
                 position = "left") %>%
-  column_spec(1, bold = TRUE, color = "#2c3e50") %>% # Wyróżnienie nazw zmiennych
-  column_spec(2, width = "30em") # Poszerzenie opisu dla czytelności
+  column_spec(1, bold = TRUE, color = "#2c3e50") %>% 
+  column_spec(2, width = "30em") 
 ```
 
 # Analiza i diagnoza braków danych
@@ -199,7 +192,6 @@ gg_miss_var(dane, show_pct = TRUE) +
        y = "% Brakujących wartości",
        x = "Zmienne") +
   theme_minimal()
-
 ```
 
 Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar` i `ggmice`. Pozwoliło to na podjęcie kluczowych decyzji:
@@ -222,7 +214,6 @@ dane <- dane %>%
     classes_missed = coalesce(classes_missed, dane_imp$classes_missed),
     modules_failed = coalesce(modules_failed, dane_imp$modules_failed)
   )
-
 ```
 
 # Imputacja danych
@@ -241,8 +232,6 @@ Dla zmiennej `grade_last_y` zastosowano podejście hybrydowe: imputacja została
 
 
 ```{r wizualizacja imputacji, echo=FALSE, fig.height=6, fig.show='hold', warning=FALSE, out.width='50%'}
-#jakość imputacji
-
 ggplot(dane_imp, aes(x = allowance, y = grade_12, color = allowance_imp)) +
   geom_jitter(alpha = 0.6, width = 0.2, size = 2.5) +
   scale_color_manual(values = c("skyblue3", "firebrick1"), 
@@ -264,7 +253,6 @@ ggplot(dane_imp, aes(x = accomodation, y = grade_12, color = accomodation_imp)) 
        y = "Średnia ocen",
        color = "Status danych") +
   theme_minimal()
-
 ```
 
 ## Weryfikacja jakości imputacji
@@ -284,7 +272,6 @@ Zastosowano metodę "łokcia" (Elbow Method), która bada, jak zmienia się spó
 ```{r zrobienie danych do wykresu łokciowego, include=FALSE}
 dane_analiza <- dane %>%
   mutate(
-    # 1. Tworzymy punktację drinków
     drinks_num_score = case_when(
       drinks == "0" ~ 0,
       drinks == "1-3" ~ 2,
@@ -293,8 +280,6 @@ dane_analiza <- dane %>%
       drinks == "8+" ~ 10,
       TRUE ~ NA_real_
     ),
-    
-    # 2. Tworzymy punktację imprez
     party_num_score = case_when(
       partying == "0" ~ 0,
       partying == "1" ~ 1,
@@ -304,18 +289,14 @@ dane_analiza <- dane %>%
       partying == "4+" ~ 4,
       TRUE ~ NA_real_
     ),
-    
-    # 3. Tworzymy punktację nauki
     study_num_score = case_when(
       studying == "0" ~ 0,
-      studying == "1-2" ~ 1.5, # poprawiłem zakres na 1-2 zgodnie z Twoim zbiorem
+      studying == "1-2" ~ 1.5, 
       studying == "3-5" ~ 4,
       studying == "5-8" ~ 6.5,
       studying == "8+" ~ 10,
       TRUE ~ NA_real_
     ),
-
-    # 4. Konwersja allowance na wartość numeryczną
     allow_val = case_when(
       allowance == "R 0 - R 1000" ~ 500,
       allowance == "R 1001 - R 2000" ~ 1500,
@@ -328,30 +309,21 @@ dane_analiza <- dane %>%
       allowance == "R 8001+" ~ 9000,
       TRUE ~ 0
     ),
-    
-    # 5. Grupowanie dochodu
     allow_group = ifelse(allow_val > 4000, "Wysoki budżet", "Niski budżet"),
-    
-    # 6. SKALA TOWARZYSKA (wykorzystujemy stworzone wyżej zmienne)
-    # To rozwiązuje Twój błąd z recode!
     social_index = drinks_num_score + party_num_score,
-    
-    # 7. Wynik akademicki (hybrydowy)
     grade_final = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
   )
 ```
 
 ```{r elbow_plot, echo=FALSE, message=FALSE, warning=FALSE}
-# --- PRZYGOTOWANIE DANYCH ---
 dane_do_klastrowania <- dane_analiza %>%
   dplyr::select(drinks_num_score, party_num_score, study_num_score, grade_final) %>%
   na.omit() %>%
   scale()
 
-# --- GENEROWANIE ŁADNIEJSZEGO WYKRESU ---
-fviz_nbclust(dane_do_klastrowania, kmeans, method = "wss", linecolor = "#2c3e50") + # Zmiana koloru linii na granatowy
-  geom_vline(xintercept = 3, linetype = "dashed", color = "#e74c3c", size = 1) +    # Czerwona linia przerywana
-  geom_point(size = 3, color = "#2c3e50") +                                         # Większe kropki
+fviz_nbclust(dane_do_klastrowania, kmeans, method = "wss", linecolor = "#2c3e50") + 
+  geom_vline(xintercept = 3, linetype = "dashed", color = "#e74c3c", size = 1) +    
+  geom_point(size = 3, color = "#2c3e50") +                                         
   labs(title = "Optymalna liczba grup (Metoda Łokcia)",
        subtitle = "Wykres sugeruje podział studentów na 3 profilowane grupy (klastry)",
        x = "Liczba klastrów (k)",
@@ -371,7 +343,6 @@ Krzywa na wykresie ulega wyraźnemu załamaniu (tworzy "łokieć") przy wartośc
 Po ustaleniu liczby klastrów ($k=3$), zastosowano algorytm *k-means* w połączeniu z analizą głównych składowych (PCA). Pozwoliło to na rzutowanie wielowymiarowych cech studentów na płaszczyznę 2D i wizualizację powstałych archetypów.
 
 ```{r klastrowanie, echo=FALSE}
-# 1. Przygotowanie danych
 dane_clust <- dane %>%
   mutate(
     party_num = case_when(
@@ -399,15 +370,12 @@ dane_clust <- dane %>%
   dplyr::select(study_num, party_num, drinks_num, missed_num, failed_num, grade) %>%
   na.omit()
 
-# 2. Obliczenia
 set.seed(123) 
 km <- kmeans(scale(dane_clust), centers = 3) 
 pca <- prcomp(scale(dane_clust))
-
 ```
 
 ```{r wykres archetypów, echo=FALSE}
-# 3. Przygotowanie danych do wykresu
 df_pca <- data.frame(pca$x[,1:2], cluster = factor(km$cluster)) %>%
   bind_cols(dane_clust) %>%
   mutate(
@@ -425,7 +393,6 @@ df_pca <- data.frame(pca$x[,1:2], cluster = factor(km$cluster)) %>%
     )
   )
 
-# 4. Wykres
 p <- ggplot(df_pca, aes(x = PC1, y = PC2, color = Archetyp, text = opis_dymka)) +
   geom_jitter(size = 2, alpha = 0.5, width = 0.12, height = 0.12) +
   scale_color_manual(values = c("Imprezowicz" = "#e74c3c",   
@@ -439,9 +406,7 @@ p <- ggplot(df_pca, aes(x = PC1, y = PC2, color = Archetyp, text = opis_dymka)) 
   theme_minimal() +
   theme(legend.position = "bottom")
 
-# 5. Wyświetlanie
 ggplotly(p, tooltip = "text")
-
 ```
 
 **Interpretacja wykresu:**
@@ -460,7 +425,6 @@ Wykres przedstawia przestrzeń zachowań studentów rozpiętą na dwóch główn
 ```{r zrobienie danych, include=FALSE}
 dane_analiza <- dane %>%
   mutate(
-    # 1. Konwersja allowance na wartość numeryczną
     allow_val = case_when(
       allowance == "R 0 - R 1000" ~ 500,
       allowance == "R 1001 - R 2000" ~ 1500,
@@ -473,11 +437,7 @@ dane_analiza <- dane %>%
       allowance == "R 8001+" ~ 9000,
       TRUE ~ 0
     ),
-    
-    # 2. Grupowanie budżetu
     allow_group = ifelse(allow_val > 4000, "Wysoki budżet", "Niski budżet"),
-    
-    # 3. Skala towarzyska
     party_score = case_when(
       partying == "0" ~ 0,
       partying == "1" ~ 1,
@@ -497,12 +457,9 @@ dane_analiza <- dane %>%
       TRUE ~ 0
     ),
     
-    # Łączymy wyniki w jeden indeks
     social_index = party_score + drink_score,
     
-    # 4. Wynik akademicki (hybrydowy)
-    grade_final = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
-  )
+    grade_final = ifelse(is.na(grade_last_y), grade_12, grade_last_y))
 ```
 
 ## Wpływ statusu ekonomicznego na styl życia i wyniki
@@ -511,11 +468,9 @@ W tej sekcji poddano weryfikacji pytanie badawcze: **czy wyższy dochód rozporz
 
 ```{r pytanie 2, echo=FALSE}
 ggplot(dane_analiza, aes(x = social_index, y = grade_final)) +
-  # Generowanie chmur gęstości
   geom_density_2d_filled(alpha = 0.8) +
   facet_wrap(~allow_group) + 
   
-  # Ustawienie kolorów i etykiet (uproszczone: tylko Niska i Wysoka)
   scale_fill_viridis_d(
     option = "plasma",
     labels = c("Niska", "", "", "", "", "", "", "", "","", "Wysoka")
@@ -531,25 +486,18 @@ ggplot(dane_analiza, aes(x = social_index, y = grade_final)) +
   
   theme_minimal() +
   theme(
-    # Przeniesienie legendy na dół
     legend.position = "bottom",
     legend.box = "horizontal",
-    # Pogrubienie tytułu i dodanie mu miejsca
     legend.title = element_text(face = "bold", size = 10),
-    # KLUCZOWE: Dodanie marginesu na dole całego wykresu, żeby legenda się zmieściła
     plot.margin = margin(t = 10, r = 10, b = 25, l = 10),
-    # Odstępy między panelami
     panel.spacing = unit(2, "lines"),
     strip.text = element_text(face = "bold")
   ) +
   
-  # Konfiguracja wyglądu paska legendy
   guides(fill = guide_legend(
     nrow = 1, 
-    # Wydłużenie paska (keywidth), żeby było go lepiej widać
     keywidth = unit(1.3, "cm"), 
     keyheight = unit(0.4, "cm"),
-    # Ustawienie tytułu NAD paskiem (to rozwiązuje problem widoczności napisu)
     title.position = "top", 
     title.hjust = 0.5,
     label.position = "bottom"
@@ -607,43 +555,24 @@ dane_risk <- dane %>%
     )
   ) %>%
   filter(!is.na(acc_group), !is.na(drinks_num), !is.na(missed_num)) %>%
-  
-  # --- KLUCZOWA ZMIANA: Liczymy procent ryzyka, nie średnią ---
   group_by(acc_group, drinks_num) %>%
   summarise(
-    # Definiujemy "Ryzyko" jako opuszczenie 2 lub więcej zajęć
-    # mean() z warunku logicznego w R daje nam frakcję (procent)
     pct_risk = mean(missed_num >= 2), 
     count = n(),
     .groups = "drop"
   )
 
-# 2. WIZUALIZACJA (WYKRES PRAWDOPODOBIEŃSTWA)
 ggplot(dane_risk, aes(x = drinks_num, y = pct_risk, group = acc_group)) +
-  
-  # --- Linia trendu ---
   geom_line(aes(color = acc_group), size = 1.5, alpha = 0.8) +
-  
-  # --- Punkty ---
   geom_point(aes(color = acc_group), size = 4, fill = "white", shape = 21, stroke = 2) +
-  
-  # --- ETYKIETY PROCENTOWE ---
   geom_text(aes(label = percent(pct_risk, accuracy = 1), color = acc_group), 
             vjust = -1.2, fontface = "bold", size = 4) +
-  
-  # --- Podział na panele ---
   facet_wrap(~acc_group) +
-  
-  # --- Skale i Kolory ---
   scale_color_manual(values = c("Akademik" = "#e74c3c", "Mieszkanie prywatne" = "#2980b9")) +
   scale_x_continuous(breaks = c(0, 2, 4, 6.5, 10),
                      labels = c("0", "1-3", "3-5", "5-8", "8+")) +
-  
-  # Formatowanie osi Y na procenty
   scale_y_continuous(labels = scales::percent_format(accuracy = 1), 
                      limits = c(0, max(dane_risk$pct_risk) * 1.25)) +
-  
-  # --- Opisy ---
   labs(
     title = "Ryzyko wysokiej absencji a spożycie alkoholu",
     x = "Liczba drinków",
@@ -660,7 +589,6 @@ ggplot(dane_risk, aes(x = drinks_num, y = pct_risk, group = acc_group)) +
     panel.grid.minor = element_blank(),
     panel.grid.major.x = element_blank()
   )
-
 ```
 
 ### Interpretacja wyników
@@ -676,10 +604,8 @@ Poniższa wizualizacja koncentruje się na **analizie ryzyka**. Oś Y pokazuje o
 Wykres trójwymiarowy służy do weryfikacji **hipotezy kompensacji**. Badamy interakcję trzech zmiennych jednocześnie: intensywności życia towarzyskiego (oś X), nakładu pracy własnej (oś Y) oraz wyników w nauce (oś Z). Szukamy odpowiedzi na kluczowe pytanie: **czy dodatkowe godziny nauki są w stanie zneutralizować negatywny wpływ intensywnego imprezowania na średnią ocen (GPA)?**
 
 ```{r pytanie 5, echo=FALSE, warning=FALSE}
-# 1. Przygotowanie danych z nowymi nazwami zmiennych
 dane_3d <- dane %>%
   mutate(
-    # Konwersja godzin nauki (studying) na wartości numeryczne
     study_num = case_when(
       studying == "0" ~ 0,
       studying == "1-3" ~ 1.5,
@@ -688,7 +614,6 @@ dane_3d <- dane %>%
       studying == "8+" ~ 10,
       TRUE ~ NA_real_
     ),
-    # Konwersja częstotliwości imprez (partying) na liczby
     party_num = case_when(
       partying == "0" ~ 0,
       partying == "1" ~ 1,
@@ -698,19 +623,16 @@ dane_3d <- dane %>%
       partying == "4+" ~ 5,
       TRUE ~ NA_real_
     ),
-    # Ustalenie finalnego GPA (hybryda grade_last_y i grade_12)
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)
   ) %>%
-  # Usunięcie braków danych dla tych konkretnych wymiarów
   filter(!is.na(study_num), !is.na(party_num), !is.na(GPA))
 
-# 2. Tworzenie interaktywnego wykresu 3D
 plot_ly(dane_3d, 
         x = ~party_num, 
         y = ~study_num, 
         z = ~GPA, 
         color = ~GPA, 
-        colors = viridis::viridis(100), # Skala od fioletu (niskie) do żółtego (wysokie)
+        colors = viridis::viridis(100), 
         type = "scatter3d", 
         mode = "markers",
         marker = list(size = 5, opacity = 0.8, line = list(color = 'white', width = 0.5)),
@@ -741,40 +663,29 @@ Analiza przestrzenna pozwala na sformułowanie następujących spostrzeżeń dot
 Analiza wpływu alkoholu na wyniki byłaby niepełna bez uwzględnienia czynników demograficznych. Poniższy wykres weryfikuje, czy płeć studenta różnicuje odporność na akademickie skutki życia towarzyskiego oraz czy dynamika spadku ocen jest uniwersalna dla obu grup.
 
 ```{r przygotowanie pytanie 7, echo=FALSE, warning=FALSE}
-# 1. DANE
 dane_plot <- dane %>%
   filter(!is.na(drinks), !is.na(grade_last_y), !is.na(sex))
 
-# 2. AGREGACJA
 srednie_df <- dane_plot %>%
   group_by(sex, drinks) %>%
   summarise(srednia_ocena = mean(grade_last_y), .groups = "drop")
 ```
 
 ```{r wykres pytanie 7, echo=FALSE, warning=FALSE}
-# 3. KOLORYSTYKA
-my_colors <- c("Kobieta" = "#FF2D55",  # Apple Pink / Coral
-               "Mężczyzna" = "#007AFF") # Apple Blue
+my_colors <- c("Kobieta" = "#FF2D55",  
+               "Mężczyzna" = "#007AFF") 
 
-# 4. WYKRES BAZOWY
 p <- ggplot() +
-  
-  # A. SKRZYPCE 
   geom_violin(data = dane_plot, 
               aes(x = drinks, y = grade_last_y, color = sex, fill = sex),
-              alpha = 0.1,            # Bardzo delikatne tło, żeby nie przytłaczało
+              alpha = 0.1,            
               trim = TRUE,            
-              size = 0.3,             # Cieniutki kontur
+              size = 0.3,             
               position = position_dodge(width = 0.7)) +
-  
-  # B. LINIE TRENDU
   geom_line(data = srednie_df, 
             aes(x = drinks, y = srednia_ocena, group = sex, color = sex),
             size = 1.2, 
             position = position_dodge(width = 0.7)) +
-  
-  # C. PUNKTY (NOŚNIK INFORMACJI)
-  # Tylko tutaj definiujemy 'text'
   geom_point(data = srednie_df, 
              aes(x = drinks, y = srednia_ocena, color = sex,
                  text = paste0("<b>", sex, "</b>",
@@ -782,8 +693,6 @@ p <- ggplot() +
                                "<br>Średnia ocena: ", round(srednia_ocena, 1))),
              size = 3.5, shape = 18, 
              position = position_dodge(width = 0.7)) +
-  
-  # D. ESTETYKA
   scale_color_manual(values = my_colors) +
   scale_fill_manual(values = my_colors) +
   scale_y_continuous(limits = c(30, 100)) + 
@@ -791,11 +700,9 @@ p <- ggplot() +
   theme_minimal() +
   theme(
     panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(), # Pionowe linie są zbędne przy kategoriach
-    legend.position = "none"
-  )
+    panel.grid.major.x = element_blank(), 
+    legend.position = "none")
 
-# 5. FINALNY PLOTLY
 final_tech <- ggplotly(p, tooltip = "text") %>%
   layout(
     font = list(family = "Arial, sans-serif", size = 12, color = "#333333"),
@@ -813,8 +720,6 @@ final_tech <- ggplotly(p, tooltip = "text") %>%
   config(displayModeBar = FALSE)
 
 for (i in seq_along(final_tech$x$data)) {
-  # Sprawdzamy, czy dana warstwa to punkty (mode zawiera 'markers')
-  # Jeśli nie (czyli to linie lub skrzypce), ustawiamy hoverinfo na 'skip'
   if (!grepl("markers", final_tech$x$data[[i]]$mode)) {
     final_tech$x$data[[i]]$hoverinfo <- "skip"
   }
@@ -835,11 +740,9 @@ Wizualizacja ta jest złożona, ponieważ łączy analizę średnich (linie) z p
 
 ## Statystyki opisowe wyników akademickich (GPA)
 ```{r analiza opisowa rozklad ocen, echo=FALSE, message=FALSE, warning=FALSE}
-# 1. Charakterystyka akademicka (GPA)
 dane_desc <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y))
 
-# Statystyki opisowe ocen
 stats_gpa <- dane_desc %>%
   summarise(
     N = n(),
@@ -850,31 +753,22 @@ stats_gpa <- dane_desc %>%
     Maksimum = max(GPA, na.rm = TRUE)
   )
 
-# Wyliczenie średniej do zmiennej (dla wygody)
 srednia <- mean(dane_desc$GPA, na.rm = TRUE)
 
-# 2. Wykres rozkładu ocen
 plot_gpa <- ggplot(dane_desc, aes(x = GPA)) +
   geom_histogram(binwidth = 5, fill = "#3498db", color = "white", alpha = 0.8) +
-  
-  # DODANE: Liczby nad słupkami (tylko > 0)
   geom_text(stat = "bin", binwidth = 5, 
             aes(label = ifelse(after_stat(count) > 0, after_stat(count), "")), 
             vjust = -0.5, size = 3) +
-  
   geom_vline(xintercept = srednia, linetype = "dashed", color = "red", size = 1) +
-  
-  # DODANE: Tekst z wartością średniej
   annotate("text", x = srednia + 1, y = 60, 
            label = paste0("Średnia: ", round(srednia, 2)), 
            color = "red", hjust = 0, fontface = "bold") +
-  
   labs(title = "Rozkład ocen studentów (GPA %)", 
        subtitle = "Czerwona linia oznacza średnią",
        x = "Wynik (%)", y = "Liczba studentów") +
   theme_minimal()
 
-# Wyświetlanie wyników
 plot_gpa
 kable(stats_gpa, caption = "Statystyki opisowe wyników akademickich (GPA)")
 ```
@@ -899,12 +793,10 @@ Zmienna GPA posiada pożądane właściwości statystyczne (bliskość rozkładu
 Zastosowanie wizualizacji typu *Raincloud Plot*  łączącej estymator gęstości jądrowej, wykres pudełkowy oraz surowe dane punktowe pozwala na wielowymiarową ocenę zależności między płcią a efektywnością kształcenia.
 
 ```{r rozklad ocen wzgledem plci, echo=FALSE}
-# Przygotowanie danych
 dane_rain <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(sex), !is.na(GPA))
 
-# Wykres Raincloud
 ggplot(dane_rain, aes(x = sex, y = GPA, fill = sex)) +
   stat_halfeye(adjust = .5, width = .6, .width = 0, justification = -.3, point_colour = NA) +
   geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
@@ -933,26 +825,21 @@ Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego stat
 
 ## Profil studenta w kontekście statusu stypendialnego
 ```{r stypendium funkcje, echo=FALSE, message=FALSE, warning=FALSE}
-# 1. PRZYGOTOWANIE DANYCH
 dane_tabs <- dane %>%
   mutate(
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
     Stypendium = factor(scholarship, 
                         levels = c("No", "Yes"), 
-                        labels = c("Niestypendyści", "Stypendyści"))
-  ) %>%
+                        labels = c("Niestypendyści", "Stypendyści"))) %>%
   dplyr::select(GPA, Stypendium, sex, studying, partying)
-
 ```
 
 ```{r stypendium obliczenia, echo=FALSE, message=FALSE, warning=FALSE}
-# 2. STATYSTYKI GPA
 stats_gpa <- dane_tabs %>%
   group_by(Stypendium) %>%
   summarise(m = round(mean(GPA, na.rm = TRUE), 2),
             sd = round(sd(GPA, na.rm = TRUE), 2))
 
-# 3. FUNKCJA POMOCNICZA DLA PROCENTÓW
 get_val <- function(df, variable, value, group, type) {
   res <- df %>%
     filter(!!sym(variable) == value & Stypendium == group) %>%
@@ -966,7 +853,6 @@ get_val <- function(df, variable, value, group, type) {
   if(type == "pct") return(as.character(round(res/total*100, 1)))
 }
 
-# 4. RĘCZNE BUDOWANIE TABELI
 create_row <- function(name, n1, s1, n2, s2) {
   data.frame(Cecha = name, N1 = n1, S1 = s1, N2 = n2, S2 = s2, stringsAsFactors = FALSE)
 }
@@ -994,11 +880,9 @@ final_df <- rbind(
   create_row("  3 razy", get_val(dane_tabs, "partying", "3", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "3", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "3", "Stypendyści", "n"), get_val(dane_tabs, "partying", "3", "Stypendyści", "pct")),
   create_row("  4+ razy", get_val(dane_tabs, "partying", "4+", "Niestypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Niestypendyści", "pct"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "n"), get_val(dane_tabs, "partying", "4+", "Stypendyści", "pct"))
 )
-
 ```
 
 ```{r stypendium tabela, echo=FALSE, message=FALSE, warning=FALSE}
-# 5. BUDOWA I STYLIZACJA FLEZTABLE
 indeksy_sekcji <- which(final_df$N1 == "" & final_df$N2 == "")
 
 ft <- flextable(final_df) %>%
@@ -1040,13 +924,10 @@ Profil stypendysty wyłaniający się z danych to profil studenta o wysokiej dys
 Analiza struktury spożycia ujawnia dominujący "styl picia" w badanej grupie. Ilustracja obrazuje deklarowaną liczbę drinków spożywanych **podczas pojedynczego wyjścia towarzyskiego**. $N = 398$
 
 ```{r spożycie alkoholu ilustracja, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=10, fig.align='center'}
-
-# 1. PRZYGOTOWANIE DANYCH
 dane_piktogram <- dane %>%
   filter(!is.na(drinks)) %>%
   count(drinks) %>%
   mutate(pct = n / sum(n),
-         # spożycie alkoholu - NAGŁÓWEK
          tekst_gora = case_when(
            drinks == "0"   ~ "Abstynencja ",
            drinks == "1-3" ~ "Symboliczne 1-3",
@@ -1055,11 +936,9 @@ dane_piktogram <- dane %>%
            drinks == "8+"  ~ "Ryzykowne 8+",
            TRUE            ~ drinks
          ),
-         # liczebność i Udział - STOPKA
          tekst_dol = paste0("Liczebność: ", n, "\nUdział: ", scales::percent(pct, accuracy = 1))) %>%
   arrange(match(drinks, c("0", "1-3", "3-5", "5-8", "8+")))
 
-# 2. WCZYTYWANIE GRAFIK (Folder "grafiki")
 img_0      <- image_uri("grafiki/img0.png")
 img_1_3    <- image_uri("grafiki/img1_3.png")
 img_3_5    <- image_uri("grafiki/img3_5.png")
@@ -1068,16 +947,12 @@ img_8_plus <- image_uri("grafiki/img8plus.png")
 
 lista_grafik <- c(img_0, img_1_3, img_3_5, img_5_8, img_8_plus)
 
-# 3. KONFIGURACJA UKŁADU
 images_list <- list()
 annotations_list <- list()
 
 for (i in 1:5) {
-  
-  # Pozycja X środka kolumny
   x_pos <- (i - 1) * 0.2 + 0.1
   
-  # Pozycjonowanie grafik
   images_list[[i]] <- list(
     source = lista_grafik[i],
     xref = "paper", yref = "paper",
@@ -1089,9 +964,6 @@ for (i in 1:5) {
     layer = "below"
   )
   
-  # Pozycjonowanie opisów
-  
-  # 1. Nagłówek
   header <- list(
     x = x_pos,
     y = 0.9, 
@@ -1102,7 +974,6 @@ for (i in 1:5) {
     font = list(size = 12)
   )
   
-  # 2. Stopka
   footer <- list(
     x = x_pos,
     y = 0.08,
@@ -1116,7 +987,6 @@ for (i in 1:5) {
   annotations_list <- c(annotations_list, list(header, footer))
 }
 
-# 4. GENEROWANIE TŁA
 plot_ly() %>% 
   layout(
     paper_bgcolor = "#e6f2ff", 
@@ -1170,54 +1040,36 @@ dane_kor <- dane %>%
       TRUE ~ NA_real_
     ),
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
-    # DODATEK: Tworzymy faktor do ładnych etykiet na osi X
     drinks_label = factor(drinks_num, 
                           levels = c(0, 2, 4, 6.5, 10),
                           labels = c("0 (Brak)", "1-3 (Mało)", "3-5 (Średnio)", "5-8 (Dużo)", "8+ (Bardzo dużo)"))
   ) %>%
   filter(!is.na(drinks_num), !is.na(GPA))
 
-# 2. Obliczenie korelacji Spearmana (bez zmian)
 test_kor <- cor.test(dane_kor$drinks_num, dane_kor$GPA, method = "spearman", exact = FALSE)
 
-# 3. WIZUALIZACJA "PODRASOWANA"
 ggplot(dane_kor, aes(x = drinks_num, y = GPA)) +
-
-  # --- Warstwa 2: Punkty (Jitter) z gradientem kolorów ---
-  # Kolor zależy od liczby drinków. Używamy 'shape=21' (kółko z obwódką) dla lepszego efektu.
   geom_jitter(aes(fill = drinks_num), shape = 21, color = "white", size = 3, width = 0.6, alpha = 0.7) +
-  
-  # --- Warstwa 3: Boxploty (przezroczyste) ---
-  # Pokazują medianę, ale nie zasłaniają kolorowych punktów
   geom_boxplot(aes(group = drinks_num), fill = NA, color = "black", 
                outlier.shape = NA, width = 1.2, size = 0.7) +
-  
-  # --- Stylizacja kolorów ---
-  # Używamy palety viridis "magma" lub "plasma" dla efektownego przejścia od chłodnego do gorącego
   scale_fill_viridis_c(option = "plasma", name = "Liczba drinków", direction = -1) +
-  
-  # --- Stylizacja osi X ---
-  # Ustawiamy własne etykiety w miejscach wartości numerycznych
   scale_x_continuous(breaks = c(0, 2, 4, 6.5, 10),
                      labels = c("0\n(Abstynenci)", "1-3\n(Okazjonalnie)", "3-5\n(Umiarkowanie)", "5-8\n(Często)", "8+\n(Ryzykownie)")) +
-  
-  # --- Podpisy i Motyw ---
   labs(
     title = "Związek między deklarowanym spożyciem a GPA",
     subtitle = paste0("Korelacja rang Spearmana: rho = ", 
                       round(test_kor$estimate, 3), " (p < 0.001)"),
-    x = "", # Usuwamy ogólny tytuł osi X, bo etykiety mówią wszystko
+    x = "",
     y = "Średnia ocen (GPA %)"
   ) +
   theme_minimal(base_size = 12) +
   theme(
     plot.title = element_text(face = "bold", size = 16, color = "#2c3e50"),
     plot.subtitle = element_text(size = 11, color = "grey40"),
-    axis.text.x = element_text(face = "bold", color = "#2c3e50", size = 9), # Pogrubione etykiety na dole
-    legend.position = "none", # Ukrywamy legendę koloru, bo oś X już to wyjaśnia
-    panel.grid.minor = element_blank(), # Czystrze tło
-    panel.grid.major.x = element_blank() # Usuwamy pionowe linie siatki 
-  )
+    axis.text.x = element_text(face = "bold", color = "#2c3e50", size = 9), 
+    legend.position = "none", 
+    panel.grid.minor = element_blank(), 
+    panel.grid.major.x = element_blank())
 ```
 
 W celu sprawdzenia zależności między ilością spożywanego alkoholu a średnią ocen (GPA), przeprowadzono analizę korelacji rangowej Spearmana.
@@ -1241,10 +1093,8 @@ Analiza wykazała istotną statystycznie ($p < 0.001$), lecz bardzo słabą ujem
 ## Porównanie GPA względem miejsca zamieszkania
 
 ```{r wnioskowanie statystyczne akademiki vs GPA, echo=FALSE, warning=FALSE}
-# Wykorzystujemy test Wilcoxona (odporny na brak rozkładu normalnego)
 test_wynik <- wilcox.test(grade_last_y ~ accomodation, data = dane)
 
-# Wizualizacja
 ggplot(dane, aes(x = accomodation, y = grade_last_y, fill = accomodation)) +
   geom_boxplot(alpha = 0.7) +
   labs(subtitle = paste("p-value =", round(test_wynik$p.value, 4)),
@@ -1279,11 +1129,9 @@ Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mies
 ## Zależność między aprobatą rodziców wobec spożywania alkoholu a tygodniowym poziomem jego konsumpcji
 
 ```{r pytanie 4 wykres test chi kwadrat, echo=FALSE, warning=FALSE}
-# 1. Przygotowanie tabeli kontyngencji i testu
 tab <- table(dane$parents_alcohol_approval, dane$drinks)
 chi_test <- chisq.test(tab)
 
-# 2. Wizualizacja: Heatmapa natężenia
 dane %>%
   filter(!is.na(parents_alcohol_approval), !is.na(drinks)) %>%
   count(parents_alcohol_approval, drinks) %>%
@@ -1309,13 +1157,11 @@ Na powyższej heatmapie przedstawiono zależność między aprobatą rodziców a
 ```{r test chi kwadrat, echo=FALSE}
 tidy(chi_test) %>%
   mutate(
-    # 1. Formatowanie p-value (pogrubienie i czerwień dla p < 0.05)
     p_value_display = cell_spec(
       scales::pvalue(p.value, accuracy = 0.001),
       bold = ifelse(p.value < 0.05, TRUE, FALSE),
       color = ifelse(p.value < 0.05, "red", "black")
     ),
-    # 2. Zaokrąglenie statystyki
     statistic = round(statistic, 2)
   ) %>%
   dplyr::select(
@@ -1326,12 +1172,12 @@ tidy(chi_test) %>%
   ) %>%
   kable(
     format = "html", 
-    escape = FALSE, # Konieczne, aby kolory zadziałały
-    align = "c",    # Wyśrodkowanie
+    escape = FALSE, 
+    align = "c",    
     caption = "Wyniki testu niezależności Chi-kwadrat"
   ) %>%
   kable_classic(full_width = F, html_font = "Cambria") %>%
-  row_spec(0, bold = TRUE, background = "#f2f2f2", color = "#2c3e50") %>% # Styl nagłówka
+  row_spec(0, bold = TRUE, background = "#f2f2f2", color = "#2c3e50") %>% 
   column_spec(1, bold = TRUE)
 ```
 
@@ -1340,7 +1186,6 @@ W celu potwierdzenia wniosków sformuowanych na podstawie heatmapy przeprowadzon
 ## Średnie spożycie alkoholu na wydziałach
 
 ```{r różnice między wydziałami, echo=FALSE}
-
 dane_fac <- dane %>%
   mutate(drinks_num = case_when(
     drinks == "0" ~ 0,
@@ -1352,14 +1197,12 @@ dane_fac <- dane %>%
   )) %>%
   filter(!is.na(faculty), !is.na(drinks_num))
 
-# 2. Test statystyczny Kruskala-Wallisa
 kw_test <- kruskal.test(drinks_num ~ faculty, data = dane_fac)
 
-# 3. Wykres średniego spożycia na wydziałach
 dane_fac %>%
   group_by(faculty) %>%
   summarise(srednia_drinkow = mean(drinks_num), n = n()) %>%
-  filter(n > 2) %>% # Odrzucamy wydziały z bardzo małą liczbą studentów
+  filter(n > 2) %>% 
   ggplot(aes(x = reorder(faculty, srednia_drinkow), y = srednia_drinkow, fill = srednia_drinkow)) +
   geom_bar(stat = "identity") +
   coord_flip() +
@@ -1368,7 +1211,6 @@ dane_fac %>%
        x = "", y = "Średnia liczba drinków (indeks)") +
   theme_minimal() +
   theme(legend.position = "none")
-
 ```
 
 Wykres przedstawia średnie spożycie alkoholu (liczbę drinków) w zależności od wydziału.
@@ -1383,7 +1225,6 @@ Wykres przedstawia średnie spożycie alkoholu (liczbę drinków) w zależności
 ## Porównanie GPA względem czasu poświęconego na naukę
 
 ```{r porównanie czy warto sie uczyc, echo=FALSE}
-# 1. Przygotowanie danych i podział na grupy
 dane_nauka <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(studying), !is.na(GPA)) %>%
@@ -1392,24 +1233,20 @@ dane_nauka <- dane %>%
     studying %in% c("5-8", "8+") ~ "Powyżej 5h / tydz.",
     TRUE ~ NA_character_
   )) %>%
-  # Konwersja na faktor dla stabilności wykresu
   mutate(study_group = as.factor(study_group))
 
-# 2. Wykres ggbetweenstats z testem odpornym
 ggbetweenstats(
   data  = dane_nauka,
   x     = study_group,
   y     = GPA,
-  type  = "robust", # Statystyka odporna na nierówne grupy i outliers
-  tr    = 0.1,      # Średnia ucinana (10%)
+  type  = "robust", 
+  tr    = 0.1,      
 subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
   xlab  = "Intensywność nauki własnej",
   ylab  = "Średnia ocen (GPA %)",
   palette = "Set2", 
   package = "RColorBrewer",
-  messages = FALSE
-)
-
+  messages = FALSE)
 ```
 
 Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 124), natomiat grupa 2: powyżej 5 godzin tygodniowo (n = 192).
@@ -1424,28 +1261,22 @@ Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu p
 ## Wpływ intensywności nauki i imprezowania na średnią ocen (GPA)
 
 ```{r czy nauka osłabia negatywny wpływ imprezowania, echo=FALSE}
-# 1. Przygotowanie danych
 dane_int <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(partying), !is.na(studying), !is.na(GPA)) %>%
-  # Podział na grupy nauki (uproszczony dla czytelności wykresu)
   mutate(study_level = ifelse(studying %in% c("0", "1-2", "3-5"), "Mało nauki (<5h)", "Dużo nauki (>5h)")) %>%
-  # Uproszczenie skali imprezowania
   mutate(party_level = case_when(
     partying == "0" ~ "Nigdy",
     partying %in% c("1", "Only weekends") ~ "Rzadko",
     partying %in% c("2", "3", "4+") ~ "Często",
     TRUE ~ NA_character_
   )) %>%
-  # Porządkowanie poziomów na osi X
   mutate(party_level = factor(party_level, levels = c("Nigdy", "Rzadko", "Często")))
 
-# 2. Obliczanie średnich dla punktów na wykresie
 interakcja_summary <- dane_int %>%
   group_by(party_level, study_level) %>%
   summarise(mean_GPA = mean(GPA, na.rm = TRUE), .groups = 'drop')
 
-# 3. Wykres interakcji (nowoczesna wersja ggplot2)
 ggplot(interakcja_summary, aes(x = party_level, y = mean_GPA, color = study_level, group = study_level)) +
   geom_line(size = 1.2) +
   geom_point(size = 4) +
@@ -1469,8 +1300,7 @@ Wykres przedstawia interakcję między intensywnością nauki a częstotliwości
 
 ## Szacowany wpływ czasu nauki i wydziału na wynik GPA
 
-```{r wykres manova ancova anova (do obczajenia), echo=FALSE}
-# 1. Przygotowanie danych (bez zmian)
+```{r wykres ancova, echo=FALSE}
 dane_ancova <- dane %>%
   mutate(
     GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y),
@@ -1489,24 +1319,18 @@ dane_ancova <- dane %>%
   filter(n() >= 5) %>%
   ungroup()
 
-# 2. Model (bez zmian)
 model_ancova <- lm(GPA ~ study_num + faculty, data = dane_ancova)
 
-# --- ULEPSZONA TABELA 1: ISTOTNOŚĆ (ANOVA Typ III) ---
-# Przygotowanie danych do tabeli
 tabela_dane <- Anova(model_ancova, type = "III") %>%
   tidy() %>%
-  # --- POPRAWKA: Usuwamy wiersze, które nie mają p-value (np. Residuals) ---
   filter(!is.na(p.value)) %>% 
   filter(term != "(Intercept)") %>%
   mutate(
-    # Formatowanie p-value: Teraz bezpieczne, bo nie ma NA
     `Wartość p` = cell_spec(
       scales::pvalue(p.value, accuracy = 0.001), 
       bold = ifelse(p.value < 0.05, TRUE, FALSE),
       color = ifelse(p.value < 0.05, "red", "black")
     ),
-    # Zaokrąglanie liczb dla czystości
     statistic = round(statistic, 2),
     sumsq = round(sumsq, 1)
   ) %>%
@@ -1514,10 +1338,8 @@ tabela_dane <- Anova(model_ancova, type = "III") %>%
     `Czynnik` = term, 
     `Suma kwadratów` = sumsq, 
     `df` = df,
-    `Statystyka F` = statistic
-  )
+    `Statystyka F` = statistic)
 
-# --- WYKRES 1: WIZUALIZACJA WPŁYWU (bez zmian) ---
 plot_model(model_ancova, 
            type = "est", 
            show.values = TRUE, 
@@ -1537,8 +1359,7 @@ plot_model(model_ancova,
   labs(
     subtitle = "Współczynniki regresji z 95% przedziałem ufności.",
     y = "Szacowana zmiana GPA (%)",
-    x = ""
-  )
+    x = "")
 ```
 
 Wykres przedstawia wyniki modelu regresji ilustrującego wpływ liczby godzin nauki oraz przynależności do wydziału na poziom GPA wraz z 95% przedziałami ufności.
@@ -1552,11 +1373,10 @@ Wykres przedstawia wyniki modelu regresji ilustrującego wpływ liczby godzin na
 >**Wniosek**: Wyniki modelu regresji wskazują, że przynależność do wydziału ma istotniejsze znaczenie dla poziomu GPA niż sama liczba godzin poświęcanych na naukę. Najwyższe wartości GPA obserwuje się wśród studentów kierunków medycznych i inżynierskich, natomiast najniższe wśród studentów nauk rolniczych oraz ekonomiczno-zarządczych. Czas nauki, analizowany samodzielnie, nie stanowi istotnego predyktora wyników akademickich.
 
 ```{r tabela ancova, echo=FALSE}
-# Generowanie tabeli
 tabela_dane %>%
   kable(
     format = "html", 
-    escape = FALSE, # Ważne dla kolorowania
+    escape = FALSE, 
     align = "c",
     caption = "Wyniki analizy kowariancji (ANCOVA)"
   ) %>%
@@ -1691,5 +1511,3 @@ Istotną rolę odegrały czynniki kontekstowe. Studenci o wyższym budżecie cz�
 Analiza mechanizmu kompensacji pokazała, że większy nakład pracy własnej wiąże się z wyższym GPA, jednak tylko do pewnego poziomu. Dodatkowe godziny nauki mogą częściowo neutralizować skutki umiarkowanego imprezowania, ale przy bardzo intensywnym stylu życia efekt ten słabnie. Płeć nie okazała się istotnym moderatorem zależności między alkoholem a wynikami, natomiast znaczenie miały czynniki psychospołeczne. Aprobata rodziców wobec picia była istotnie związana z wyższą konsumpcją (χ² = 16,06; p = 0,003). Studenci pobierający stypendium deklarowali większą dyscyplinę w nauce i częstsze ograniczanie rozrywki do weekendów, co sprzyjało stabilniejszym wynikom.
 
 Badanie ma swoje ograniczenia. Dane są samoopisowe i obserwacyjne, dlatego nie pozwalają jednoznacznie rozstrzygać o przyczynach i skutkach. Mimo starannej imputacji pozostaje pewien poziom niepewności, a część potencjalnych czynników zakłócających, takich jak stres czy jakość snu, nie została w pełni uwzględniona. Z praktycznego punktu widzenia wyniki sugerują jednak, że uczelnie powinny traktować problem spożycia alkoholu nie tylko jako kwestię zdrowia, ale także jako element wpływający pośrednio na funkcjonowanie akademickie. Najbardziej sensowne wydają się działania kierowane do konkretnych grup ryzyka, zwłaszcza mieszkańców akademików oraz studentów o wysokim budżecie. Całość pokazuje, że wpływ alkoholu na GPA jest niewielki, ale jego znaczenie rośnie w określonych kontekstach społecznych i przy bardzo intensywnych wzorcach konsumpcji.
-
-
