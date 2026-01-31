@@ -778,7 +778,7 @@ kable(stats_gpa, caption = "Statystyki opisowe wyników akademickich (GPA)")
 Przeprowadzona analiza statystyczna zmiennej charakteryzującej wyniki w nauce (GPA) na próbie $N = 398$ studentów pozwala na sformułowanie następujących wniosków dotyczących struktury osiągnięć akademickich badanej populacji:
 
 **1. Przeciętny poziom i typowy wynik**
-Rozkład ocen przypomina klasyczną **krzywą Gaussa (rozkład normalny)**, co jest sytuacją pożądaną w statystyce. Potwierdza to fakt, że średnia ocena ($\bar{x} = 68.4\%$) jest niemal identyczna jak mediana ($Me = 68\%$). Taka zbieżność oznacza, że grupa jest symetryczna – nie ma tu wyraźnej przewagi osób z wynikami bardzo niskimi ani bardzo wysokimi. Najwięcej studentów (tzw. dominanta) uzyskuje wyniki w przedziale **70–75%**, co wskazuje, że standardem w badanej grupie jest poziom "dobry".
+Rozkład ocen przypomina klasyczną **krzywą Gaussa (rozkład normalny)**, co jest sytuacją pożądaną w statystyce. Potwierdza to fakt, że średnia ocena ($\bar{x} = 68.4\%$) jest niemal identyczna jak mediana    ($Me = 68\%$). Taka zbieżność oznacza, że grupa jest symetryczna, ponieważ nie ma tu wyraźnej przewagi osób z wynikami bardzo niskimi ani bardzo wysokimi. Najwięcej studentów (dominanta) uzyskuje wyniki w przedziale **70–75%**, co wskazuje, że standardem w badanej grupie jest poziom "dobry".
 
 **2. Zróżnicowanie wyników (Dyspersja)**
 Wartość odchylenia standardowego ($SD = 9.98$) świadczy o umiarkowanym zróżnicowaniu wyników. W praktyce oznacza to, że **większość badanej grupy** (ok. 68% studentów) mieści się w przedziale wyników od ok. **58% do 78%**. Sugeruje to, że poziom wiedzy studentów jest stosunkowo wyrównany, choć oczywiście występują naturalne różnice indywidualne.
@@ -821,7 +821,7 @@ Krzywe widoczne nad wykresami mają bardzo zbliżony kształt dla obu grup. Wska
 Rozrzut punktów pod wykresem pokazuje, że w obu grupach występują bardzo zróżnicowane postawy. Zarówno wśród kobiet, jak i mężczyzn znajdziemy osoby z wynikami bardzo wysokimi, jak i pojedyncze przypadki wyników skrajnie niskich (poniżej 40%). Zakres zmienności jest porównywalny, co potwierdza, że poziom zróżnicowania wiedzy jest niezależny od płci.
 
 **Podsumowanie:**
-Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej kohorcie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
+Na podstawie analizy wizualnej można postawić hipotezę o braku istotnego statystycznie związku między płcią a wynikami GPA w badanej próbie. Ewentualne różnice są subtelne i prawdopodobnie nie mają znaczenia praktycznego.
 
 ## Profil studenta w kontekście statusu stypendialnego
 ```{r stypendium funkcje, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1012,7 +1012,7 @@ plot_ly() %>%
 Wizualizacja danych wskazuje na znaczące zróżnicowanie w postawach studentów wobec alkoholu. Najliczniejszą grupę stanowią osoby o wysokim poziomie konsumpcji (5-8 jednostek), które obejmują 28% badanej populacji (110 osób). Sugeruje to, że dominującym modelem w grupie badawczej jest spożycie o charakterze intensywnym.
 
 **2. Skala zjawisk skrajnych: Abstynencja vs Ryzyko**
-Zjawisko całkowitej abstynencji ma charakter niszowy i dotyczy jedynie 7% respondentów (26 osób). Na drugim biegunie znajduje się grupa wykazująca ryzykowne wzorce spożycia (8+ jednostek), która jest liczna i obejmuje aż 22% badanych (86 osób).
+Zjawisko całkowitej abstynencji ma charakter niszowy i dotyczy jedynie 7% respondentów (26 osób). Po przeciwnej stronie znajduje się grupa wykazująca ryzykowne wzorce spożycia (8+ jednostek), która jest liczna i obejmuje aż 22% badanych (86 osób).
 
 **3. Charakterystyka spożycia umiarkowanego i symbolicznego**
 Grupy deklarujące spożycie symboliczne (1-3 jednostki) oraz umiarkowane (3-5 jednostek) reprezentują po 22% udziału w próbie (odpowiednio 89 i 87 osób). Sumarycznie blisko połowa badanych utrzymuje się w przedziale niskiego i średniego spożycia, co wskazuje na wyraźną polaryzację postaw między studentami zachowującymi kontrolę nad konsumpcją a grupą pijącą intensywnie.
@@ -1021,7 +1021,7 @@ Grupy deklarujące spożycie symboliczne (1-3 jednostki) oraz umiarkowane (3-5 j
 Łączny udział osób pijących powyżej 5 jednostek (kategorie wysoka i ryzykowna) wynosi aż 50% całej populacji badawczej. Wynik ten jest istotny z punktu widzenia higieny trybu życia i może korelować z innymi zachowaniami zdrowotnymi oraz wynikami akademickimi, które były analizowane we wcześniejszych sekcjach raportu.
 
 **Podsumowanie:**
-Dane przedstawione na piktogramie ukazują model konsumpcji o wysokim stopniu intensywności. Dominacja grup o spożyciu wysokim i ryzykownym (łącznie połowa badanych) przy marginalnym odsetku abstynentów świadczy o szerokiej akceptacji społecznej dla częstego i obfitego spożywania alkoholu w badanej grupie studenckiej.
+Dane przedstawione na grafice ukazują model konsumpcji o wysokim stopniu intensywności. Dominacja grup o spożyciu wysokim i ryzykownym (łącznie połowa badanych) przy marginalnym odsetku abstynentów świadczy o szerokiej akceptacji społecznej dla częstego i obfitego spożywania alkoholu w badanej grupie studenckiej.
 
 # Analiza korelacji
 
