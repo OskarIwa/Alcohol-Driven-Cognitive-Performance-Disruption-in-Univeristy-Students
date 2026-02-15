@@ -1,5 +1,5 @@
 ---
-title: "Alcohol Driven Cognitive Performance Disruption in University Students"
+title: "Wpływ spożycia alkoholu na funkcje poznawcze studentów uczelni wyższych"
 author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
 date: "`r Sys.Date()`"
 output:
@@ -7,12 +7,77 @@ output:
     theme:
       bootswatch: cosmo
     toc: true
-    toc_float: true
+    toc_float: false
+    number_sections: false
+    css: styles.css
+    includes:
+      in_header: header.html
   pdf_document:
     toc: true
   word_document:
     toc: true
 ---
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // 1. SPIS TREŚCI
+    var toc = document.querySelector("#TOC");
+    
+    // SCROLLBAR
+    var innerContainer = document.createElement("div");
+    innerContainer.className = "toc-inner-container";
+    
+    // Wszystkie elementy spisu do nowego kontenera
+    while (toc.firstChild) {
+        innerContainer.appendChild(toc.firstChild);
+    }
+    toc.appendChild(innerContainer);
+
+    // 3. PRZYCISK MENU
+    var btn = document.createElement("button");
+    btn.innerHTML = "☰";
+    btn.className = "toggle-sidebar-btn";
+    document.body.appendChild(btn);
+
+    btn.addEventListener("click", function() {
+        var body = document.querySelector("body");
+        toc.classList.toggle("hidden");
+        body.classList.toggle("full-width");
+        // Zmiana ikony przycisku
+        btn.innerHTML = toc.classList.contains("hidden") ? "🡲" : "☰";
+    });
+
+    // 4. OBSŁUGA STRZAŁEK
+    // Wewnątrz .toc-inner-container
+    var itemsWithChildren = document.querySelectorAll('.toc-inner-container li:has(ul)');
+    
+    itemsWithChildren.forEach(function(li) {
+        li.classList.add('has-children');
+        
+        // Strzałka
+        var arrow = document.createElement("span");
+        arrow.className = "toc-arrow";
+        arrow.innerHTML = "▼"; 
+        
+        // Strzałka przed linkiem
+        li.insertBefore(arrow, li.firstChild);
+        
+        // Obsługa kliknięcia w strzałkę
+        arrow.addEventListener("click", function(e) {
+            e.stopPropagation(); // Nie uruchamiaj linku, tylko strzałkę
+            li.classList.toggle('collapsed');
+            
+            // Wygląd strzałki
+            if (li.classList.contains('collapsed')) {
+                arrow.innerHTML = "▶";
+            } else {
+                arrow.innerHTML = "▼";
+            }
+        });
+    });
+});
+</script>
 
 ```{r pakiety, include=FALSE}
 wymagane_pakiety <- c(
@@ -315,7 +380,7 @@ dane_analiza <- dane %>%
   )
 ```
 
-```{r elbow_plot, echo=FALSE, message=FALSE, warning=FALSE}
+```{r elbow_plot, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
 dane_do_klastrowania <- dane_analiza %>%
   dplyr::select(drinks_num_score, party_num_score, study_num_score, grade_final) %>%
   na.omit() %>%
@@ -466,7 +531,7 @@ dane_analiza <- dane %>%
 
 W tej sekcji poddano weryfikacji pytanie badawcze: **czy wyższy dochód rozporządzalny stymuluje intensywniejsze życie towarzyskie?**
 
-```{r pytanie 2, echo=FALSE}
+```{r pytanie 2, echo=FALSE, fig.align='center'}
 ggplot(dane_analiza, aes(x = social_index, y = grade_final)) +
   geom_density_2d_filled(alpha = 0.8) +
   facet_wrap(~allow_group) + 
@@ -529,7 +594,7 @@ Wizualizacja wykorzystuje metodę estymacji gęstości jądrowej (**2D Kernel De
 
 W tej części analizy sprawdzono, czy rodzaj zakwaterowania (akademik vs. mieszkanie prywatne) moderuje związek między spożyciem alkoholu a absencją na zajęciach. Weryfikujemy hipotezę, czy "kontrola społeczna" w akademikach lub większa swoboda w mieszkaniach prywatnych wpływają na dyscyplinę studentów.
 
-```{r pytanie 3, echo=FALSE, message=FALSE}
+```{r pytanie 3, echo=FALSE, message=FALSE, fig.align='center'}
 dane_risk <- dane %>%
   mutate(
     acc_group = case_when(
@@ -739,7 +804,7 @@ Wizualizacja ta jest złożona, ponieważ łączy analizę średnich (linie) z p
 # Analiza opisowa
 
 ## Statystyki opisowe wyników akademickich (GPA)
-```{r analiza opisowa rozklad ocen, echo=FALSE, message=FALSE, warning=FALSE}
+```{r analiza opisowa rozklad ocen, echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
 dane_desc <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y))
 
@@ -792,7 +857,7 @@ Zmienna GPA posiada pożądane właściwości statystyczne (bliskość rozkładu
 ## Porównanie wyników kobiet i mężczyzn
 Zastosowanie wizualizacji typu *Raincloud Plot*  łączącej estymator gęstości jądrowej, wykres pudełkowy oraz surowe dane punktowe pozwala na wielowymiarową ocenę zależności między płcią a efektywnością kształcenia.
 
-```{r rozklad ocen wzgledem plci, echo=FALSE}
+```{r rozklad ocen wzgledem plci, echo=FALSE, fig.align='center'}
 dane_rain <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(sex), !is.na(GPA))
@@ -801,8 +866,8 @@ ggplot(dane_rain, aes(x = sex, y = GPA, fill = sex)) +
   stat_halfeye(adjust = .5, width = .6, .width = 0, justification = -.3, point_colour = NA) +
   geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
   geom_point(aes(color = sex), position = position_jitter(width = .05), size = 1, alpha = 0.4) +
-  scale_fill_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "royalblue4")) +
-  scale_color_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "royalblue4")) +
+  scale_fill_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "#003357")) +
+  scale_color_manual(values = c("Kobieta" = "deeppink3", "Mężczyzna" = "#003357")) +
   labs(title = "Rozkład ocen względem płci",
        x = "", y = "Wynik akademicki (%)") +
   coord_flip() +
@@ -888,11 +953,11 @@ indeksy_sekcji <- which(final_df$N1 == "" & final_df$N2 == "")
 ft <- flextable(final_df) %>%
   add_header_row(values = c("", "NIESTYPENDYŚCI", "STYPENDYŚCI"), colwidths = c(1, 2, 2)) %>%
   set_header_labels(N1="Mean / N", S1="SD / %", N2="Mean / N", S2="SD / %") %>%
-  bg(part = "header", bg = "#1565c0") %>%
+  bg(part = "header", bg = "#003357") %>%
   color(part = "header", color = "white") %>%
   bold(part = "header") %>%
-  bg(i = indeksy_sekcji, bg = "#e3f2fd") %>%
-  color(i = indeksy_sekcji, color = "#1565c0") %>%
+  bg(i = indeksy_sekcji, bg = "#38607c") %>%
+  color(i = indeksy_sekcji, color = "white") %>%
   bold(i = indeksy_sekcji) %>%
   align(align = "center", part = "all") %>%
   align(j = 1, align = "left", part = "all") %>%
@@ -1027,7 +1092,7 @@ Dane przedstawione na grafice ukazują model konsumpcji o wysokim stopniu intens
 
 ## Wpływ alkoholu na wyniki w nauce
 
-```{r analiza korelacji pytanie 1, echo=FALSE, message=FALSE}
+```{r analiza korelacji pytanie 1, echo=FALSE, message=FALSE, fig.align='center'}
 
 dane_kor <- dane %>%
   mutate(
@@ -1092,7 +1157,7 @@ Analiza wykazała istotną statystycznie ($p < 0.001$), lecz bardzo słabą ujem
 
 ## Porównanie GPA względem miejsca zamieszkania
 
-```{r wnioskowanie statystyczne akademiki vs GPA, echo=FALSE, warning=FALSE}
+```{r wnioskowanie statystyczne akademiki vs GPA, echo=FALSE, warning=FALSE, fig.align='center'}
 test_wynik <- wilcox.test(grade_last_y ~ accomodation, data = dane)
 
 ggplot(dane, aes(x = accomodation, y = grade_last_y, fill = accomodation)) +
@@ -1128,7 +1193,7 @@ Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mies
 
 ## Zależność między aprobatą rodziców wobec spożywania alkoholu a tygodniowym poziomem jego konsumpcji
 
-```{r pytanie 4 wykres test chi kwadrat, echo=FALSE, warning=FALSE}
+```{r pytanie 4 wykres test chi kwadrat, echo=FALSE, warning=FALSE, fig.align='center'}
 tab <- table(dane$parents_alcohol_approval, dane$drinks)
 chi_test <- chisq.test(tab)
 
@@ -1185,7 +1250,7 @@ W celu potwierdzenia wniosków sformuowanych na podstawie heatmapy przeprowadzon
 
 ## Średnie spożycie alkoholu na wydziałach
 
-```{r różnice między wydziałami, echo=FALSE}
+```{r różnice między wydziałami, echo=FALSE, fig.align='center'}
 dane_fac <- dane %>%
   mutate(drinks_num = case_when(
     drinks == "0" ~ 0,
@@ -1224,7 +1289,7 @@ Wykres przedstawia średnie spożycie alkoholu (liczbę drinków) w zależności
 
 ## Porównanie GPA względem czasu poświęconego na naukę
 
-```{r porównanie czy warto sie uczyc, echo=FALSE}
+```{r porównanie czy warto sie uczyc, echo=FALSE, fig.align='center'}
 dane_nauka <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(studying), !is.na(GPA)) %>%
@@ -1260,7 +1325,7 @@ Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu p
 
 ## Wpływ intensywności nauki i imprezowania na średnią ocen (GPA)
 
-```{r czy nauka osłabia negatywny wpływ imprezowania, echo=FALSE}
+```{r czy nauka osłabia negatywny wpływ imprezowania, echo=FALSE, fig.align='center'}
 dane_int <- dane %>%
   mutate(GPA = ifelse(is.na(grade_last_y), grade_12, grade_last_y)) %>%
   filter(!is.na(partying), !is.na(studying), !is.na(GPA)) %>%
