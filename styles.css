@@ -1,0 +1,169 @@
+/* 1. ZMIENNE KOLORYSTYCZNE */
+    :root {
+        --main-color: #1f4c6b; /* KOLOR LEGENDY */
+        --title-color: #003357;
+        --text-color: #333333;
+    }
+
+    body {
+        color: var(--text-color);
+        margin-left: 320px;
+        transition: margin-left 0.3s ease;
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
+    }
+    
+    body.full-width { margin-left: 40px; }
+
+/* 2. TYPOGRAFIA NAGŁÓWKÓW (PALATINO)*/
+    
+    /* Punkt 3: Tytuły, podrozdziały i pod-podrozdziały*/
+    h1, h2, h3, h4, h1.title {
+        font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif !important;
+        color: var(--title-color) !important;
+    }
+
+/* 3. TYTUŁ GŁÓWNY I LOGOTYPY */
+.logos-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    
+    min-height: 140px; 
+    padding: 10px 0;
+    margin-bottom: -140px;
+}
+
+.logo-left {
+    width: 144px;
+    height: auto;
+}
+
+.logo-right {
+    width: 185px;
+    height: auto;
+}
+
+h1.title {
+    font-size: 38px !important; 
+    line-height: 1.2 !important;
+    font-weight: 700;
+    text-align: center; 
+    
+    padding-left: 140px;  
+    padding-right: 140px; 
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+    
+    border-bottom: 4px solid var(--title-color); 
+    color: var(--title-color) !important;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif !important;
+    
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 4. FORMATOWANIE POZOSTAŁYCH NAGŁÓWKÓW */
+    h1:not(.title) {
+        font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif !important;
+        font-size: 30px;         
+        font-weight: 700;
+        color: #ffffff !important; 
+        
+        margin-top: 50px;
+        margin-bottom: 25px;
+        
+        text-align: center;         
+        
+        background-color: #1f4c6b;  
+        padding: 12px 30px;        
+        border-radius: 10px;       
+        
+        display: block;            
+        width: 100%;               
+        box-sizing: border-box;    
+        
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.15); 
+        border-bottom: none;
+    }
+
+    h1:not(.title)::before, h1:not(.title)::after {
+        display: none !important;
+    }
+    
+    
+/* 5. SPIS TREŚCI (LEGENDA) */
+    #TOC {
+        position: fixed; left: 0; top: 0; bottom: 0; width: 300px;
+        background-color: var(--main-color); /* #38607c */
+        color: white;
+        z-index: 900;
+        transition: transform 0.3s ease;
+        box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+        
+        border-radius: 0 !important; 
+        
+        padding: 60px 0px 20px 20px; 
+        overflow: hidden; 
+    }
+
+    .toc-inner-container {
+        width: 100%; height: 100%; overflow-y: auto; padding-right: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.3) transparent;
+    }
+    
+
+    .toc-inner-container ul { list-style: none; padding-left: 0; margin: 0; }
+    .toc-inner-container li { margin: 8px 0; position: relative; }
+    .toc-inner-container a { text-decoration: none; display: inline-block; width: 85%; vertical-align: top; transition: 0.2s; border-radius: 4px; }
+
+
+    .toc-inner-container > ul > li > a {
+        font-size: 16px; font-weight: 700; color: #ffffff;
+        text-transform: uppercase; padding: 5px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+
+    .toc-inner-container ul ul { padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
+    .toc-inner-container ul ul li a {
+        font-size: 14px; font-weight: 400; color: rgba(200, 230, 255, 0.85);
+        padding: 3px 5px; border-bottom: none; text-transform: none;
+    }
+    
+    .toc-inner-container a:hover { background-color: rgba(255,255,255,0.2); color: white; }
+
+
+    .toc-arrow {
+        cursor: pointer; display: inline-block; width: 20px; text-align: center;
+        color: rgba(255,255,255,0.6); font-size: 12px; margin-right: 2px;
+    }
+    .toc-arrow:hover { color: white; transform: scale(1.2); }
+    
+    li.collapsed > ul { display: none !important; }
+
+    /* Scrollbar */
+    .toc-inner-container::-webkit-scrollbar { width: 6px; }
+    .toc-inner-container::-webkit-scrollbar-track { background: transparent; }
+    .toc-inner-container::-webkit-scrollbar-thumb { background-color: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+
+    /* Guzik Menu */
+    .toggle-sidebar-btn {
+        position: fixed; top: 15px; left: 20px; z-index: 1000;
+        background: transparent; border: 2px solid white;
+        color: white; font-size: 20px; cursor: pointer; padding: 4px 10px; border-radius: 4px;
+    }
+    body.full-width .toggle-sidebar-btn { color: var(--main-color); border-color: var(--main-color); }
+    #TOC.hidden { transform: translateX(-300px); }
+    
+    /* Numeracja */
+    .header-section-number { display: none; }
+    body { counter-reset: h1counter; }
+    h1:not(.title)::before { counter-increment: h1counter; content: counter(h1counter, upper-roman) ". "; }
+    h1:not(.title) { counter-reset: h2counter; }
+    h2::before { counter-increment: h2counter; content: counter(h2counter) ". "; }
+    h2 { counter-reset: h3counter; }
+    h3::before { counter-increment: h3counter; content: counter(h2counter) counter(h3counter, lower-alpha) ") "; }
