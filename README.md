@@ -1,5 +1,5 @@
-# 🍺 Alcohol & Cognitive Performance in University Students
-> A Multidimensional Statistical Analysis of Lifestyle, Economics and Academic Outcomes.
+# 🍺 Wpływ spożycia alkoholu na funkcje poznawcze studentów uczelni wyższych
+> Wielowymiarowa analiza statystyczna stylu życia, uwarunkowań ekonomicznych i osiągnięć akademickich.
 
 [![R](https://img.shields.io/badge/R-276DC3?style=for-the-badge&logo=r&logoColor=white)](https://www.r-project.org/)
 [![RMarkdown](https://img.shields.io/badge/R_Markdown-000000?style=for-the-badge&logo=markdown&logoColor=white)](https://rmarkdown.rstudio.com/)
