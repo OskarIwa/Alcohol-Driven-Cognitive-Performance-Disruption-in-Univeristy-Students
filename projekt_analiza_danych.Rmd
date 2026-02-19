@@ -4,6 +4,7 @@ author: "Oskar Iwaszkiewicz, Bartłomiej Duda, Kajetan Bernat, Olga Dawidowicz"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    self_contained: true
     theme:
       bootswatch: cosmo
     toc: true
