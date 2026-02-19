@@ -110,7 +110,7 @@ lapply(wymagane_pakiety, library, character.only = TRUE)
 
 ---
 
-**Słowa kluczowe:** *spożycie alkoholu, wyniki w nauce, analiza wielowymiarowa, imputacja danych, segmentacja studentów, uwarunkowania ekonomiczne, statystyka opisowa.*
+**Słowa kluczowe:** *spożycie alkoholu, wyniki w nauce, analiza wielowymiarowa, segmentacja studentów, uwarunkowania ekonomiczne, statystyka opisowa.*
 
 ---
 
@@ -1653,7 +1653,7 @@ Analiza pokazała, że większy nakład pracy własnej wiąże się z wyższym G
 #### Ograniczenia i wnioski praktyczne
 Badanie ma swoje ograniczenia: dane są **samoopisowe i obserwacyjne**, dlatego nie pozwalają jednoznacznie rozstrzygać o przyczynach i skutkach. Mimo starannej imputacji pozostaje pewien poziom niepewności.
 
-**Rekomendacje:**
-> Z praktycznego punktu widzenia wyniki sugerują, że uczelnie powinny traktować problem spożycia alkoholu nie tylko jako kwestię zdrowia, ale także jako element wpływający pośrednio na **funkcjonowanie akademickie**. 
+> **Rekomendacje:**
+Z praktycznego punktu widzenia wyniki sugerują, że uczelnie powinny traktować problem spożycia alkoholu nie tylko jako kwestię zdrowia, ale także jako element wpływający pośrednio na **funkcjonowanie akademickie**. 
 
 Najbardziej sensowne wydają się działania kierowane do konkretnych grup ryzyka, zwłaszcza mieszkańców **akademików** oraz studentów o **wysokim budżecie**. Całość pokazuje, że wpływ alkoholu na GPA jest niewielki, ale jego znaczenie rośnie w określonych kontekstach społecznych i przy bardzo intensywnych wzorcach konsumpcji.
