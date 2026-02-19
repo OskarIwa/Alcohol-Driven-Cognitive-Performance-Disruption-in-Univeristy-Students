@@ -118,14 +118,14 @@ lapply(wymagane_pakiety, library, character.only = TRUE)
 # Wprowadzenie
 ## Cel badania
 
-Głównym celem niniejszego projektu jest zbadanie wielowymiarowych zależności między **spożyciem alkoholu**, **stylem życia**, a **wynikami w nauce** oraz **funkcjonowaniem poznawczym** studentów.
+Głównym celem niniejszego projektu jest zbadanie wielowymiarowych zależności między **spożyciem alkoholu**, **stylem życia** a **wynikami w nauce** oraz **funkcjonowaniem poznawczym** studentów.
 
 > **Problem badawczy:** Analiza wpływu kultury picia w środowisku akademickim na karierę edukacyjną.
 
 Analiza opiera się na **danych ankietowych**. Aby zapewnić rzetelność wnioskowania statystycznego, dane poddano procesom **czyszczenia** oraz **imputacji**. Badane czynniki podzielono na cztery kluczowe grupy zmiennych:
 
 * **Ekonomiczne:** stypendia, dochód, zakwaterowanie.
-* **Społeczne:** relacje z rodzicami, aprobata rodziców dla alkoholu.
+* **Społeczne:** relacje z rodzicami, aprobata rodziców dla konsumpcji alkoholu.
 * **Behawioralne:** częstotliwość imprezowania, absencja na zajęciach.
 * **Demograficzne:** płeć, wiek.
 
@@ -277,7 +277,7 @@ gg_miss_var(dane, show_pct = TRUE) +
   theme_minimal()
 ```
 
-Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietów `naniar`. Pozwoliło to na podjęcie kluczowych decyzji:
+Przed przystąpieniem do uzupełniania danych, przeprowadzono wizualną inspekcję brakujących wartości przy użyciu pakietu `naniar`. Pozwoliło to na podjęcie kluczowych decyzji:
 
 1. **Eliminacja rekordów:** Usunięto obserwacje posiadające braki w kluczowych zmiennych strukturalnych: `sex` (płeć), `faculty` (wydział) oraz `last_year` (rok studiów). Zmienne te definiują profil studenta i są trudne do wiarygodnego odtworzenia metodami statystycznymi.
 2. **Identyfikacja mechanizmu braków:** Potwierdzono, że część braków ma charakter strukturalny (np. brak ocen z poprzedniego roku dla studentów pierwszego roku), co wyklucza prostą imputację średnią dla całej populacji.
@@ -610,7 +610,7 @@ Wizualizacja wykorzystuje metodę estymacji gęstości jądrowej (**2D Kernel De
 
 ### Kluczowe wnioski
 1.  **Pieniądze jako stymulant:** W grupie z **wyższym budżetem** „ośrodek ciężkości” (żółty obszar) wyraźnie przesuwa się w prawą stronę osi X. Potwierdza to, że większe zasoby finansowe ułatwiają dostęp do płatnych rozrywek i sprzyjają **częstszej konsumpcji alkoholu**.
-2.  **Zwiększone ryzyko akademickie:** Choć w obu grupach najwyższe oceny korelują z niską intensywnością imprezowania, grupa zasobna wykazuje znacznie większe **rozproszone w stronę wysokiej intensywności towarzyskiej**. Sugeruje to, że nadmiar środków sprzyja przedkładaniu zabawy nad obowiązki.
+2.  **Zwiększone ryzyko akademickie:** Choć w obu grupach najwyższe oceny korelują z niską intensywnością imprezowania, grupa zasobna wykazuje znacznie większe **rozproszenie w stronę wysokiej intensywności towarzyskiej**. Sugeruje to, że nadmiar środków sprzyja przedkładaniu zabawy nad obowiązki.
 3.  **Dyscyplina niższych dochodów:** Studenci z niższym budżetem wykazują silniejszą koncentrację w obszarze **umiarkowanego życia towarzyskiego**, co przekłada się na statystycznie stabilniejsze i bardziej przewidywalne wyniki w nauce.
 
 > **Podsumowanie:** Wyższy status ekonomiczny działa jako **katalizator życia towarzyskiego**. Zwiększając dostępność kosztownych rozrywek, staje się on pośrednim czynnikiem ryzyka dla wyników akademickich poprzez wyraźną zmianę priorytetów czasowych studenta.
@@ -619,7 +619,7 @@ Wizualizacja wykorzystuje metodę estymacji gęstości jądrowej (**2D Kernel De
 
 W tej części analizy sprawdzono, czy **rodzaj zakwaterowania** (akademik vs. mieszkanie prywatne) **moderuje związek** między **spożyciem alkoholu** a **absencją na zajęciach**. 
 
-> **Hipoteza:** Weryfikujemy, czy **„kontrola społeczna”** w akademikach lub **większa swoboda** w mieszkaniach prywatnych wpływają na **dyscyplinę studentów**.
+> **Hipoteza:** Weryfikujemy, czy **„kontrola społeczna”** w akademikach lub **większa swoboda** w mieszkaniach prywatnych wpływa na **dyscyplinę studentów**.
 
 ```{r pytanie 3, echo=FALSE, message=FALSE, fig.align='center'}
 dane_risk <- dane %>%
@@ -687,7 +687,7 @@ ggplot(dane_risk, aes(x = drinks_num, y = pct_risk, group = acc_group)) +
 
 Poniższa wizualizacja koncentruje się na **analizie ryzyka**. Oś Y pokazuje odsetek studentów, którzy przekroczyli "bezpieczny próg" absencji (2 lub więcej opuszczonych zajęć), w zależności od intensywności życia towarzyskiego.
 
-* **Punkt krytyczny (Eskalacja):** Do poziomu "5-8 drinków" obie grupy zachowują się podobnie – ryzyko wysokiej absencji oscyluje wokół 30-36%. Kluczowa różnica pojawia się przy ekstremalnym spożyciu ("8+").
+* **Punkt krytyczny (Eskalacja):** Do poziomu `5-8 drinków` obie grupy zachowują się podobnie – ryzyko wysokiej absencji oscyluje wokół 30-36%. Kluczowa różnica pojawia się przy ekstremalnym spożyciu (`8+`).
 * **Efekt akademika:** W środowisku akademika następuje gwałtowna "eksplozja" ryzyka – aż **70%** intensywnie imprezujących studentów zaniedbuje zajęcia. Krzywa wznosi się tu znacznie bardziej stromo niż w przypadku mieszkań prywatnych (gdzie wskaźnik ten zatrzymuje się na **47%**).
 * **Wniosek środowiskowy:** Dane sugerują, że akademik stanowi **środowisko sprzyjające eskalacji** zachowań skrajnych. Prawdopodobnie "efekt domina" i obecność współlokatorów sprawiają, że po ostrych imprezach znacznie trudniej jest zmobilizować się do pójścia na uczelnię niż w cichszym mieszkaniu prywatnym.
 
@@ -1180,7 +1180,7 @@ Analiza wykazała istotną statystycznie ($p < 0.001$), lecz bardzo słabą ujem
 2. **Siła efektu (Wielkość)**: Współczynnik $\rho = -0.086$ oznacza korelację śladową. Ilość wypitego alkoholu wyjaśnia mniej niż 1% zmienności wyników w nauce. W praktyce oznacza to, że znając tylko ilość spożywanego przez studenta alkoholu, nie jesteśmy w stanie przewidzieć jego ocen.
 3. **Mechanizmy kompensacyjne**: Tak słaby związek sugeruje, że studenci skutecznie oddzielają życie towarzyskie od nauki. Ewentualny negatywny wpływ alkoholu jest prawdopodobnie niwelowany przez inne czynniki (np. nadrabianie zaległości w dni bez imprez) lub ujawnia się dopiero przy skrajnym spożyciu, które w tej próbie stanowi mniejszość.
 
-> **Podsumowanie**: Hipoteza o negatywnym wpływie alkoholu na oceny została potwierdzona statystycznie, jednak siła tego oddziaływania jest marginalna. Samo spożycie alkoholu nie jest głównym wyznacznikiem sukcesu akademickiego – kluczowe wydają się inne czynniki
+> **Podsumowanie**: Hipoteza o negatywnym wpływie alkoholu na oceny została potwierdzona statystycznie, jednak siła tego oddziaływania jest marginalna. Samo spożycie alkoholu nie jest głównym wyznacznikiem sukcesu akademickiego – kluczowe wydają się inne czynniki.
 
 # Wnioskowanie statystyczne
 
@@ -1218,7 +1218,7 @@ Sprawdzamy, czy środowisko akademika sprzyja gorszemu GPA w porównaniu do mies
 * Rozkłady wyników są **bardzo podobne** w obu grupach; mediany GPA są zbliżone, a rozstępy międzykwartylowe są porównywalne.
 * W grupie "Private" widoczna jest pojedyncza wartość odstająca (outlier), jednak nie wpływa ona na ogólny wniosek o braku istotnych różnic między grupami.
 
->**Wniosek**:Podsumowując, miejsce zamieszkania (prywatne vs. nieprywatne) **nie ma istotnego wpływu** na wyniki w nauce (GPA) w badanej próbie studentów.
+> **Wniosek**: Podsumowując, miejsce zamieszkania (prywatne vs. nieprywatne) **nie ma istotnego wpływu** na wyniki w nauce (GPA) w badanej próbie studentów.
 
 ## Zależność między aprobatą rodziców wobec spożywania alkoholu a tygodniowym poziomem jego konsumpcji
 
@@ -1349,12 +1349,12 @@ subtitle = "Podział na progu 5 godzin dodatkowej pracy tygodniowo",
   messages = FALSE)
 ```
 
-Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 206), natomiat grupa 2: powyżej 5 godzin tygodniowo (n = 192).
+Wykres przedstawia porównanie wyników GPA studentów w zależności od czasu poświęcanego na naukę własną: grupa 1 to do 5 godzin tygodniowo (n = 206), natomiast grupa 2: powyżej 5 godzin tygodniowo (n = 192).
 
 ### Interpretacje wyników i wnioski
 * **Średnie (trimmed mean) GPA** w obu grupach są niemal identyczne (grupa 1: 68,42; grupa 2: 67,90).
 * **Rozkłady wyników GPA** w obu grupach są bardzo podobne; zbliżone mediany, podobny zakres wartości oraz nie wykazują wyraźnego przesunięcia jednej grupy względem drugiej.
-* Przeprowadzony **test t Yuen'a** (odporny na obserwacje odstające) zwrócił wartość p-value = 0,63 > 0,05, zatem nie stwierdzono istotnej statystycznie różnicy w GPA pomiędzy studentami uczącymi się do 5 godzin tygodniowo a tymi, którzy uczą się więcej. Przedział ufności obejmuje 0, co dodatkowo potwierdza brak istotnego efektu.
+* Przeprowadzony **test t Yuena** (odporny na obserwacje odstające) zwrócił wartość p-value = 0,63 > 0,05, zatem nie stwierdzono istotnej statystycznie różnicy w GPA pomiędzy studentami uczącymi się do 5 godzin tygodniowo a tymi, którzy uczą się więcej. Przedział ufności obejmuje 0, co dodatkowo potwierdza brak istotnego efektu.
 
 >**Wniosek**: Czas poświęcony na naukę własną (powyżej lub poniżej 5 godzin tygodniowo) **nie różnicuje istotnie** wyników GPA. Studenci uczący się więcej niż 5 godzin tygodniowo nie osiągają statystycznie istotnie wyższych wyników niż studenci uczący się krócej.
 
@@ -1485,7 +1485,7 @@ tabela_dane %>%
   row_spec(0, bold = TRUE, background = "#f2f2f2") 
 ```
 
-Powyższa analiza została dodatkowo poparta **analizą kowariancji (ANCOVA)**, w której zbadano wpływ liczby godzin nauki (study_num) oraz wydziału (faculty) na poziom GPA, przy jednoczesnym uwzględnieniu ob czynników w jednym modelu. Analiza ta **nie potwierdziła istotnego wpływu** czasu nauki ani wydziału na poziom GPA, co sugeruje, że obserwowane wcześniej różnice mają charakter opisowy i nie znajdują potwierdzenia statystycznego w modelu.
+Powyższa analiza została dodatkowo poparta **analizą kowariancji (ANCOVA)**, w której zbadano wpływ liczby godzin nauki (study_num) oraz wydziału (faculty) na poziom GPA, przy jednoczesnym uwzględnieniu obu czynników w jednym modelu. Analiza ta **nie potwierdziła istotnego wpływu** czasu nauki ani wydziału na poziom GPA, co sugeruje, że obserwowane wcześniej różnice mają charakter opisowy i nie znajdują potwierdzenia statystycznego w modelu.
 
 # Uporządkowany model logitowy
 
@@ -1590,7 +1590,7 @@ wyniki_statystyczne %>%
 ## Metodologia
 Zastosowana metoda: **Regresja Logistyczna dla Zmiennych Porządkowych**.
 
-W celu zbadania czynników wpływających na skalę niepowodzeń akademickich, zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zastosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
+W celu zbadania czynników wpływających na skalę niepowodzeń akademickich zastosowano model proporcjonalnych szans. Jest to specyficzny rodzaj regresji, dedykowany do analizy zmiennych, które posiadają naturalny porządek, ale nie są liczbami ciągłymi. Zastosowano następujące uporządkowanie: Brak niezdanych przedmiotów < 1 niezdany < 2 niezdane < 3 niezdane.
 
 ## Interpretacje i wnioski
 **Opuszczanie zajęć**: Zmienna ta jest istotnym statystycznie czynnikiem ryzyka. Każdy wzrost częstotliwości opuszczania zajęć o jeden poziom wiąże się ze wzrostem szansy na gorszy wynik egzaminacyjny (tj. oblanie większej liczby przedmiotów) o 23%.
@@ -1636,9 +1636,7 @@ Wynik ten sugeruje, że samo picie nie jest głównym czynnikiem decydującym o 
 Istotną rolę odegrały czynniki kontekstowe:
 
 * **Budżet:** Studenci o wyższym budżecie częściej prowadzili intensywne życie towarzyskie, co pośrednio zwiększało ryzyko gorszych wyników.
-* **Miejsce zamieszkania:** 
-* W **akademikach** przy bardzo wysokim spożyciu odsetek osób opuszczających co najmniej dwa zajęcia sięgał około **70%**.
-* W **mieszkaniach prywatnych** wynosił około **47%**.
+* **Miejsce zamieszkania:** W **akademikach** przy bardzo wysokim spożyciu odsetek osób opuszczających co najmniej dwa zajęcia sięgał około **70%**. W **mieszkaniach prywatnych** wynosił około **47%**.
 * **Model logitowy:** Potwierdził, że zarówno intensywność picia, jak i środowisko mieszkaniowe istotnie zwiększają prawdopodobieństwo absencji.
 
 
